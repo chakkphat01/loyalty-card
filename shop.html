@@ -407,7 +407,7 @@ let isPolling  = false;
 // ─────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────
-function init() {
+async function init() {
   const p = new URLSearchParams(window.location.search);
   shopId = p.get('shop');
   if (!shopId) { showPage('page-error'); return; }
@@ -415,8 +415,8 @@ function init() {
   const saved = sessionStorage.getItem('shopPass_' + shopId);
   if (saved) {
     password = saved;
-    showPage('page-login'); // will auto-verify below
-    proceedAfterLogin();
+    // Skip login — go directly to main UI (password already verified before)
+    await proceedAfterLogin();
   } else {
     showPage('page-login');
   }
@@ -457,11 +457,9 @@ async function pinConfirm() {
 
 async function verifyPassword() {
   try {
-    const r = await apiPost({ action:'check_points', shopId, phone:'0000000000' });
-    // We'll use check_points with a dummy phone — if shop not found or wrong pass caught by GAS
-    // Actually we verify by doing get_queue which requires password
-    const r2 = await apiPost({ action:'get_queue', shopId, password });
-    return r2.success === true;
+    // get_queue requires a valid password — fastest way to verify
+    const r = await apiPost({ action:'get_queue', shopId, password });
+    return r.success === true;
   } catch { return false; }
 }
 
@@ -469,19 +467,24 @@ async function verifyPassword() {
 //  AFTER LOGIN
 // ─────────────────────────────────────
 async function proceedAfterLogin() {
+  let shopName = `ร้านค้า #${shopId}`;
   try {
+    // Use a throwaway phone number just to get shop metadata (check_points auto-creates customer if needed)
+    // NOTE: GAS returns shop.name (not shopName)
     const data = await apiPost({ action:'check_points', shopId, phone:'0000000000' });
-    if (!data.success) throw new Error(data.error);
-    planType = (data.shop.planType || 'S').toUpperCase();
+    if (data.success && data.shop) {
+      planType  = (data.shop.planType || 'S').toUpperCase();
+      shopName  = data.shop.name || shopName;
+    }
   } catch (e) {
     planType = 'S'; // fallback
   }
 
   if (planType === 'S') {
-    document.getElementById('s-shop-name').textContent = `ร้านค้า #${shopId}`;
+    document.getElementById('s-shop-name').textContent = shopName;
     showPage('page-plan-s');
   } else {
-    document.getElementById('ml-shop-name').textContent = `ร้านค้า #${shopId}`;
+    document.getElementById('ml-shop-name').textContent = shopName;
     document.getElementById('ml-plan-badge').textContent = 'PLAN ' + planType;
     showPage('page-plan-ml');
     startPolling();
