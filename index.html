@@ -425,7 +425,10 @@
     const remaining     = Math.max(0, maxPoints - currentPoints);
 
     // Card color
-    document.documentElement.style.setProperty('--card-color', shop.cardColor || '#1a1a2e');
+    // Card_Color in Sheets may be stored without '#' (e.g. 'FFC3BA') — add it if missing
+    const rawColor = shop.cardColor || '';
+    const cardColor = rawColor ? (rawColor.startsWith('#') ? rawColor : '#' + rawColor) : '#1a1a2e';
+    document.documentElement.style.setProperty('--card-color', cardColor);
 
     // Reward text
     const rewardEl = document.getElementById('reward-text');
@@ -437,7 +440,7 @@
 
     // Shop name & plan badge
     const nameEl = document.getElementById('shop-name-display');
-    nameEl.textContent = shop.shopName || `ร้านค้า #${shopId}`;
+    nameEl.textContent = shop.name || shop.shopName || `ร้านค้า #${shopId}`;
     nameEl.className = 'heading font-bold text-xl text-white/90';
 
     const badgeEl = document.getElementById('plan-badge');
@@ -509,7 +512,9 @@
         </div>`;
     } else {
       // Plan M / L
-      const btnBg    = shopData?.cardColor ? lighten(shopData.cardColor) : '#f5c842';
+      const rawBtn = shopData?.cardColor || '';
+      const safeColor = rawBtn ? (rawBtn.startsWith('#') ? rawBtn : '#' + rawBtn) : '';
+      const btnBg = safeColor ? lighten(safeColor) : '#f5c842';
       const ringBg   = btnBg + '55';
       area.innerHTML = `
         <div class="pulse-btn-wrap">
