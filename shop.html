@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>StampX — จัดการร้าน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --green:  #16a34a;
+      --green-l:#22c55e;
+      --red:    #dc2626;
+      --amber:  #d97706;
+      --bg:     #f8f7f4;
+      --surface:#ffffff;
+      --border: #e5e2db;
+      --text:   #1c1917;
+      --muted:  #78716c;
+      --ink:    #292524;
+    }
+
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+    body {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* subtle dot grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: radial-gradient(circle, #c8c5be 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: .35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .layer { position: relative; z-index: 1; }
+
+    /* ── NUMPAD ── */
+    .np-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: var(--ink);
+      width: 100%; aspect-ratio: 1.3;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .1s, transform .1s, box-shadow .1s;
+      box-shadow: 0 2px 0 var(--border);
+      user-select: none;
+    }
+    .np-btn:active { background: #f0ede8; transform: translateY(2px); box-shadow: none; }
+    .np-btn.del  { background: #fff5f5; border-color: #fca5a5; color: var(--red); }
+    .np-btn.ok   { background: var(--green); border-color: #15803d; color: #fff; box-shadow: 0 3px 0 #15803d; }
+    .np-btn.ok:active { box-shadow: none; background: #15803d; }
+
+    /* phone display */
+    .phone-box {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      text-align: center;
+      color: var(--ink);
+      min-height: 68px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phone-box.placeholder { color: #c4bfba; }
+
+    /* pin dots */
+    .pin-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: background .15s, border-color .15s, transform .2s;
+    }
+    .pin-dot.filled { background: var(--green); border-color: var(--green); transform: scale(1.15); }
+
+    /* ── QUEUE CARD ── */
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-16px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .queue-card {
+      animation: slideDown .3s cubic-bezier(.34,1.56,.64,1) both;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-left: 4px solid var(--green);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.07);
+    }
+    .queue-card.approving { opacity: .5; pointer-events: none; transition: opacity .2s; }
+
+    @keyframes badgePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,.4); }
+      50%      { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+    }
+    .new-badge { animation: badgePulse 1.5s ease-out 3; }
+
+    /* ── APPROVE BTN ── */
+    .approve-btn {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 22px;
+      cursor: pointer;
+      transition: background .12s, transform .1s;
+      white-space: nowrap;
+    }
+    .approve-btn:active { background: #15803d; transform: scale(.96); }
+
+    /* ── ADD BTN ── */
+    .add-btn {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      width: 100%;
+      padding: 18px 0;
+      cursor: pointer;
+      transition: background .12s, transform .1s;
+      box-shadow: 0 3px 0 #15803d;
+    }
+    .add-btn:active { background: #15803d; transform: translateY(3px); box-shadow: none; }
+    .add-btn:disabled { background: #86efac; box-shadow: none; cursor: not-allowed; }
+
+    /* ── TOAST ── */
+    @keyframes toastIn  { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
+    @keyframes toastOut { from { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } to { opacity:0; transform:translateX(-50%) translateY(16px) scale(.95); } }
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; white-space: nowrap;
+      font-family: 'IBM Plex Sans Thai', sans-serif; font-size: .9rem; font-weight: 500;
+      padding: 12px 22px; border-radius: 50px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      animation: toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    .toast.out { animation: toastOut .3s ease forwards; }
+
+    /* ── FADE ── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both; }
+    .d1{animation-delay:.08s} .d2{animation-delay:.16s} .d3{animation-delay:.24s} .d4{animation-delay:.32s}
+
+    /* ── DIVIDER ── */
+    .section-label {
+      font-size: .7rem; font-weight: 600; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    /* ── POLLING INDICATOR ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* iPad split layout */
+    @media (min-width: 768px) {
+      .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    }
+
+    /* login pin large */
+    .pin-login-np .np-btn { font-size: 1.8rem; aspect-ratio: 1.5; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ ERROR ═══════════════════════════════════ -->
+<div id="page-error" class="layer hidden min-h-dvh flex flex-col items-center justify-center px-6 text-center">
+  <div class="text-5xl mb-4">🏪</div>
+  <h2 class="text-xl font-bold text-stone-800 mb-2" style="font-family:'IBM Plex Sans Thai',sans-serif">ไม่พบข้อมูลร้านค้า</h2>
+  <p class="text-stone-400 text-sm">ตรวจสอบ URL หรือสแกน QR Code ใหม่อีกครั้ง</p>
+</div>
+
+<!-- ═══════════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<div id="page-login" class="layer hidden min-h-dvh flex flex-col items-center justify-center px-5 py-10" style="max-width:360px;margin:auto;">
+
+  <div class="fade-up text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-stone-800 mb-4 shadow-lg">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="11" width="18" height="11" rx="2" stroke="#fff" stroke-width="1.8"/>
+        <path d="M7 11V7a5 5 0 0110 0v4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="16" r="1.5" fill="#22c55e"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-stone-800" style="font-family:'IBM Plex Sans Thai',sans-serif">เข้าสู่ระบบร้านค้า</h1>
+    <p class="text-stone-400 text-sm mt-1">กรอกรหัสผ่าน 4 หลัก</p>
+  </div>
+
+  <!-- PIN display -->
+  <div class="fade-up d1 flex gap-4 mb-8 justify-center">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+
+  <!-- Numpad -->
+  <div class="fade-up d2 w-full pin-login-np">
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <button class="np-btn" onclick="pinPress('1')">1</button>
+      <button class="np-btn" onclick="pinPress('2')">2</button>
+      <button class="np-btn" onclick="pinPress('3')">3</button>
+      <button class="np-btn" onclick="pinPress('4')">4</button>
+      <button class="np-btn" onclick="pinPress('5')">5</button>
+      <button class="np-btn" onclick="pinPress('6')">6</button>
+      <button class="np-btn" onclick="pinPress('7')">7</button>
+      <button class="np-btn" onclick="pinPress('8')">8</button>
+      <button class="np-btn" onclick="pinPress('9')">9</button>
+      <button class="np-btn del" onclick="pinDelete()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="np-btn" onclick="pinPress('0')">0</button>
+      <button class="np-btn ok" onclick="pinConfirm()" id="pin-ok-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12l5 5L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <p id="login-error" class="text-center text-red-500 text-sm mt-3 hidden">รหัสผ่านไม่ถูกต้อง</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PLAN S ═══════════════════════════════════ -->
+<div id="page-plan-s" class="layer hidden min-h-dvh flex flex-col px-4 py-5" style="max-width:440px;margin:auto;">
+
+  <!-- Header -->
+  <div class="fade-up flex items-center justify-between mb-5">
+    <div>
+      <p class="section-label">โหมดร้านค้า</p>
+      <h2 class="text-lg font-bold text-stone-800 mt-0.5" style="font-family:'IBM Plex Sans Thai',sans-serif" id="s-shop-name">—</h2>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs bg-stone-100 border border-stone-200 text-stone-500 rounded-full px-3 py-1 font-medium">PLAN S</span>
+      <button onclick="doLogout()" class="text-stone-400 hover:text-stone-600 transition-colors p-1">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="fade-up d1 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex gap-3 items-start">
+    <span class="text-xl">✏️</span>
+    <p class="text-amber-800 text-sm leading-relaxed">คีย์เบอร์โทรลูกค้าและกด <strong>เพิ่ม 1 แต้ม</strong> เพื่อบันทึกแต้มสะสม</p>
+  </div>
+
+  <!-- Phone input -->
+  <div class="fade-up d2 mb-4">
+    <p class="section-label mb-2">เบอร์โทรลูกค้า</p>
+    <div class="phone-box placeholder" id="s-phone-display">กรอกเบอร์โทร</div>
+  </div>
+
+  <!-- Numpad Plan S -->
+  <div class="fade-up d3 mb-4">
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <button class="np-btn" onclick="sNumPress('1')">1</button>
+      <button class="np-btn" onclick="sNumPress('2')">2</button>
+      <button class="np-btn" onclick="sNumPress('3')">3</button>
+      <button class="np-btn" onclick="sNumPress('4')">4</button>
+      <button class="np-btn" onclick="sNumPress('5')">5</button>
+      <button class="np-btn" onclick="sNumPress('6')">6</button>
+      <button class="np-btn" onclick="sNumPress('7')">7</button>
+      <button class="np-btn" onclick="sNumPress('8')">8</button>
+      <button class="np-btn" onclick="sNumPress('9')">9</button>
+      <button class="np-btn del" onclick="sNumDelete()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button class="np-btn" onclick="sNumPress('0')">0</button>
+      <button class="np-btn del" onclick="sNumClear()" style="font-size:.9rem;">ล้าง</button>
+    </div>
+  </div>
+
+  <div class="fade-up d4">
+    <button class="add-btn" id="s-add-btn" onclick="doManualAdd()">➕ เพิ่ม 1 แต้ม</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PLAN M/L ═══════════════════════════════════ -->
+<div id="page-plan-ml" class="layer hidden min-h-dvh flex flex-col px-4 py-5 pb-8" style="max-width:900px;margin:auto;">
+
+  <!-- Header -->
+  <div class="fade-up flex items-center justify-between mb-5">
+    <div>
+      <p class="section-label">จัดการร้านค้า</p>
+      <h2 class="text-lg font-bold text-stone-800 mt-0.5" style="font-family:'IBM Plex Sans Thai',sans-serif" id="ml-shop-name">—</h2>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="ml-plan-badge" class="text-xs bg-stone-800 text-white rounded-full px-3 py-1 font-medium">PLAN M</span>
+      <div id="poll-indicator" class="flex items-center gap-1.5 text-xs text-stone-400">
+        <div class="w-3.5 h-3.5 spin" id="spin-icon">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" stroke-dasharray="30 20"/></svg>
+        </div>
+        <span>Live</span>
+      </div>
+      <button onclick="doLogout()" class="text-stone-400 hover:text-stone-600 transition-colors p-1">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="split-layout">
+
+    <!-- ── LEFT: Manual Add ── -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="section-label">คีย์มือ</span>
+        <span class="text-xs text-stone-400 font-normal">(ลูกค้าลืมมือถือ)</span>
+      </div>
+      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm">
+
+        <!-- phone display -->
+        <div class="phone-box placeholder mb-4" id="ml-phone-display">กรอกเบอร์โทร</div>
+
+        <!-- numpad -->
+        <div class="grid grid-cols-3 gap-2.5 mb-3">
+          <button class="np-btn" onclick="mlNumPress('1')">1</button>
+          <button class="np-btn" onclick="mlNumPress('2')">2</button>
+          <button class="np-btn" onclick="mlNumPress('3')">3</button>
+          <button class="np-btn" onclick="mlNumPress('4')">4</button>
+          <button class="np-btn" onclick="mlNumPress('5')">5</button>
+          <button class="np-btn" onclick="mlNumPress('6')">6</button>
+          <button class="np-btn" onclick="mlNumPress('7')">7</button>
+          <button class="np-btn" onclick="mlNumPress('8')">8</button>
+          <button class="np-btn" onclick="mlNumPress('9')">9</button>
+          <button class="np-btn del" onclick="mlNumDelete()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <button class="np-btn" onclick="mlNumPress('0')">0</button>
+          <button class="np-btn del" onclick="mlNumClear()" style="font-size:.85rem;">ล้าง</button>
+        </div>
+
+        <button class="add-btn" id="ml-add-btn" onclick="doMLManualAdd()">➕ เพิ่ม 1 แต้ม</button>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Queue ── -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="section-label">คิวรออนุมัติ</span>
+        <span id="queue-count-badge" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-semibold new-badge">0</span>
+      </div>
+
+      <!-- Queue list -->
+      <div id="queue-list" class="flex flex-col gap-3">
+        <!-- Empty state -->
+        <div id="queue-empty" class="bg-white border border-stone-200 rounded-2xl p-8 text-center shadow-sm">
+          <div class="text-4xl mb-3">🟢</div>
+          <p class="text-stone-500 text-sm font-medium">ไม่มีคิวรออนุมัติ</p>
+          <p class="text-stone-400 text-xs mt-1">ระบบจะแจ้งเตือนเมื่อมีลูกค้าขอแต้ม</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ JAVASCRIPT ═══════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby-ZdTn11SA5Azsri_20v1RuNDqinWrVYvK6YUzNi1qF3e8sWLnpa83V9gKGnzeigPE/exec';
+const POLL_INTERVAL_MS = 5000;
+
+// ─────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────
+let shopId     = null;
+let password   = null;
+let planType   = null;
+let pinBuffer  = '';
+let sBuf       = '';   // Plan S phone buffer
+let mlBuf      = '';   // Plan ML phone buffer
+let pollTimer  = null;
+let knownQueue = new Set();   // requestIds already shown
+let isPolling  = false;
+
+// ─────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────
+function init() {
+  const p = new URLSearchParams(window.location.search);
+  shopId = p.get('shop');
+  if (!shopId) { showPage('page-error'); return; }
+
+  const saved = sessionStorage.getItem('shopPass_' + shopId);
+  if (saved) {
+    password = saved;
+    showPage('page-login'); // will auto-verify below
+    proceedAfterLogin();
+  } else {
+    showPage('page-login');
+  }
+}
+
+// ─────────────────────────────────────
+//  PIN LOGIN
+// ─────────────────────────────────────
+function pinPress(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(pinConfirm, 120);
+}
+function pinDelete() {
+  pinBuffer = pinBuffer.slice(0,-1);
+  updatePinDots();
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+async function pinConfirm() {
+  if (pinBuffer.length !== 4) return;
+  password = pinBuffer;
+  const ok = await verifyPassword();
+  if (!ok) {
+    document.getElementById('login-error').classList.remove('hidden');
+    pinBuffer = '';
+    updatePinDots();
+    setTimeout(() => document.getElementById('login-error').classList.add('hidden'), 2500);
+    return;
+  }
+  sessionStorage.setItem('shopPass_' + shopId, password);
+  proceedAfterLogin();
+}
+
+async function verifyPassword() {
+  try {
+    const r = await apiPost({ action:'check_points', shopId, phone:'0000000000' });
+    // We'll use check_points with a dummy phone — if shop not found or wrong pass caught by GAS
+    // Actually we verify by doing get_queue which requires password
+    const r2 = await apiPost({ action:'get_queue', shopId, password });
+    return r2.success === true;
+  } catch { return false; }
+}
+
+// ─────────────────────────────────────
+//  AFTER LOGIN
+// ─────────────────────────────────────
+async function proceedAfterLogin() {
+  try {
+    const data = await apiPost({ action:'check_points', shopId, phone:'0000000000' });
+    if (!data.success) throw new Error(data.error);
+    planType = (data.shop.planType || 'S').toUpperCase();
+  } catch (e) {
+    planType = 'S'; // fallback
+  }
+
+  if (planType === 'S') {
+    document.getElementById('s-shop-name').textContent = `ร้านค้า #${shopId}`;
+    showPage('page-plan-s');
+  } else {
+    document.getElementById('ml-shop-name').textContent = `ร้านค้า #${shopId}`;
+    document.getElementById('ml-plan-badge').textContent = 'PLAN ' + planType;
+    showPage('page-plan-ml');
+    startPolling();
+  }
+}
+
+function doLogout() {
+  if (!confirm('ออกจากระบบใช่ไหม?')) return;
+  sessionStorage.removeItem('shopPass_' + shopId);
+  stopPolling();
+  password = null; pinBuffer = ''; planType = null;
+  updatePinDots();
+  showPage('page-login');
+}
+
+// ─────────────────────────────────────
+//  PLAN S — NUMPAD
+// ─────────────────────────────────────
+function sNumPress(d) { if(sBuf.length>=10) return; sBuf+=d; updateSDisplay(); }
+function sNumDelete() { sBuf=sBuf.slice(0,-1); updateSDisplay(); }
+function sNumClear()  { sBuf=''; updateSDisplay(); }
+function updateSDisplay() {
+  const el = document.getElementById('s-phone-display');
+  if (!sBuf) { el.textContent='กรอกเบอร์โทร'; el.classList.add('placeholder'); return; }
+  el.classList.remove('placeholder');
+  el.textContent = fmtPhone(sBuf);
+}
+
+async function doManualAdd() {
+  if (sBuf.length !== 10) { showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706'); return; }
+  const btn = document.getElementById('s-add-btn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  try {
+    const r = await apiPost({ action:'manual_add', shopId, password, phone:sBuf });
+    if (!r.success) throw new Error(r.error);
+    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`, '#16a34a');
+    sBuf=''; updateSDisplay();
+  } catch(e) {
+    showToast('❌ เกิดข้อผิดพลาด: ' + e.message, '#dc2626');
+  } finally {
+    btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม';
+  }
+}
+
+// ─────────────────────────────────────
+//  PLAN ML — NUMPAD
+// ─────────────────────────────────────
+function mlNumPress(d) { if(mlBuf.length>=10) return; mlBuf+=d; updateMLDisplay(); }
+function mlNumDelete() { mlBuf=mlBuf.slice(0,-1); updateMLDisplay(); }
+function mlNumClear()  { mlBuf=''; updateMLDisplay(); }
+function updateMLDisplay() {
+  const el = document.getElementById('ml-phone-display');
+  if (!mlBuf) { el.textContent='กรอกเบอร์โทร'; el.classList.add('placeholder'); return; }
+  el.classList.remove('placeholder');
+  el.textContent = fmtPhone(mlBuf);
+}
+
+async function doMLManualAdd() {
+  if (mlBuf.length !== 10) { showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706'); return; }
+  const btn = document.getElementById('ml-add-btn');
+  btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
+  try {
+    const r = await apiPost({ action:'manual_add', shopId, password, phone:mlBuf });
+    if (!r.success) throw new Error(r.error);
+    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`, '#16a34a');
+    mlBuf=''; updateMLDisplay();
+  } catch(e) {
+    showToast('❌ ' + e.message, '#dc2626');
+  } finally {
+    btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม';
+  }
+}
+
+// ─────────────────────────────────────
+//  POLLING
+// ─────────────────────────────────────
+function startPolling() {
+  fetchQueue();
+  pollTimer = setInterval(fetchQueue, POLL_INTERVAL_MS);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer=null; }
+}
+
+async function fetchQueue() {
+  if (isPolling) return;
+  isPolling = true;
+  try {
+    const r = await apiPost({ action:'get_queue', shopId, password });
+    if (!r.success) return;
+    renderQueue(r.queue || []);
+  } catch(_) {
+    // silently fail on poll
+  } finally {
+    isPolling = false;
+  }
+}
+
+function renderQueue(queue) {
+  const list   = document.getElementById('queue-list');
+  const empty  = document.getElementById('queue-empty');
+  const badge  = document.getElementById('queue-count-badge');
+
+  // Collect current IDs in DOM
+  const existingIds = new Set([...list.querySelectorAll('[data-rid]')].map(el=>el.dataset.rid));
+
+  // Remove cards no longer in queue
+  existingIds.forEach(rid => {
+    if (!queue.find(q=>q.requestId===rid)) {
+      const el = document.getElementById('qcard-'+rid);
+      if (el) { el.style.opacity='0'; el.style.transform='scale(.95)'; el.style.transition='all .25s'; setTimeout(()=>el.remove(),250); }
+    }
+  });
+
+  let newCount = 0;
+  // Add new cards
+  queue.forEach(item => {
+    if (!existingIds.has(item.requestId)) {
+      newCount++;
+      const card = buildQueueCard(item);
+      // Insert before empty state placeholder
+      list.insertBefore(card, empty);
+      knownQueue.add(item.requestId);
+    }
+  });
+
+  // Beep & badge
+  if (newCount > 0) playBeep();
+  badge.textContent = queue.length;
+  badge.classList.toggle('hidden', queue.length === 0);
+
+  // Empty state
+  const hasCards = list.querySelectorAll('[data-rid]').length > 0;
+  empty.style.display = hasCards ? 'none' : '';
+}
+
+function buildQueueCard(item) {
+  const div = document.createElement('div');
+  div.className = 'queue-card p-4 flex items-center justify-between gap-3';
+  div.id = 'qcard-' + item.requestId;
+  div.dataset.rid = item.requestId;
+
+  const ts = item.timestamp ? new Date(item.timestamp) : null;
+  const timeStr = ts ? ts.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+
+  div.innerHTML = `
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0 new-badge"></span>
+        <span class="font-bold text-stone-800 text-lg" style="font-family:'IBM Plex Mono',monospace">${fmtPhone(item.phone)}</span>
+      </div>
+      <p class="text-stone-400 text-xs">${timeStr}</p>
+    </div>
+    <button class="approve-btn" onclick="doApprove('${item.requestId}', this)">
+      ✅ อนุมัติ
+    </button>`;
+  return div;
+}
+
+async function doApprove(requestId, btn) {
+  const card = document.getElementById('qcard-' + requestId);
+  if (card) card.classList.add('approving');
+  btn.textContent = '⏳';
+
+  try {
+    const r = await apiPost({ action:'approve_point', shopId, password, requestId });
+    if (!r.success) throw new Error(r.error);
+
+    showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)} — ${r.newPoints} แต้ม`, '#16a34a');
+
+    // Remove card with animation
+    if (card) {
+      card.style.transition = 'all .3s';
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(30px)';
+      setTimeout(()=>{
+        card.remove();
+        const hasCards = document.querySelectorAll('#queue-list [data-rid]').length > 0;
+        document.getElementById('queue-empty').style.display = hasCards ? 'none' : '';
+        const badge = document.getElementById('queue-count-badge');
+        const remaining = document.querySelectorAll('#queue-list [data-rid]').length;
+        badge.textContent = remaining;
+        badge.classList.toggle('hidden', remaining === 0);
+      }, 300);
+    }
+  } catch(e) {
+    showToast('❌ อนุมัติไม่สำเร็จ: ' + e.message, '#dc2626');
+    if (card) card.classList.remove('approving');
+    btn.textContent = '✅ อนุมัติ';
+  }
+}
+
+// ─────────────────────────────────────
+//  AUDIO BEEP (Web Audio API)
+// ─────────────────────────────────────
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + .15);
+    gain.gain.setValueAtTime(.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + .3);
+
+    // Second ping
+    const osc2 = ctx.createOscillator();
+    const g2   = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1100, ctx.currentTime + .2);
+    g2.gain.setValueAtTime(.3, ctx.currentTime + .2);
+    g2.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .45);
+    osc2.start(ctx.currentTime + .2);
+    osc2.stop(ctx.currentTime + .45);
+    setTimeout(()=>ctx.close(), 1000);
+  } catch(_) {}
+}
+
+// ─────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────
+async function apiPost(body) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  return res.json();
+}
+
+function showPage(id) {
+  ['page-error','page-login','page-plan-s','page-plan-ml'].forEach(p => {
+    document.getElementById(p).classList.toggle('hidden', p !== id);
+  });
+}
+
+function fmtPhone(p) {
+  const s = String(p).replace(/\D/g,'').padEnd(10,' ');
+  return s.replace(/(\S{3})(\S{3})(\S{4})/, '$1-$2-$3');
+}
+
+function showToast(msg, bg='#333') {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.background = bg;
+  t.style.color = '#fff';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(),300); }, 3200);
+}
+
+// ─────────────────────────────────────
+//  START
+// ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
