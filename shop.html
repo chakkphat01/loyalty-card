@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
@@ -10,208 +10,267 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 
   <style>
-    :root {
-      --green:  #16a34a;
-      --green-l:#22c55e;
-      --red:    #dc2626;
-      --amber:  #d97706;
-      --bg:     #f8f7f4;
-      --surface:#ffffff;
-      --border: #e5e2db;
-      --text:   #1c1917;
-      --muted:  #78716c;
-      --ink:    #292524;
+    /* ── LIGHT THEME ── */
+    :root[data-theme="light"] {
+      --bg:      #f8f7f4;
+      --surface: #ffffff;
+      --border:  #e5e2db;
+      --text:    #1c1917;
+      --muted:   #78716c;
+      --ink:     #292524;
+      --faint:   #f0ede8;
+      --grid-dot: #c8c5be;
+      --green:   #16a34a;
+      --green-l: #22c55e;
+      --red:     #dc2626;
+      --amber:   #d97706;
+      --np-shadow: #e5e2db;
+      --np-bg:   #ffffff;
+      --np-text: #292524;
+      --phone-placeholder: #c4bfba;
+      --scrollbar: #e5e2db;
+    }
+    /* ── DARK THEME ── */
+    :root[data-theme="dark"] {
+      --bg:      #111827;
+      --surface: #1f2937;
+      --border:  rgba(255,255,255,0.1);
+      --text:    #f9fafb;
+      --muted:   #9ca3af;
+      --ink:     #f3f4f6;
+      --faint:   rgba(255,255,255,0.06);
+      --grid-dot: rgba(255,255,255,0.06);
+      --green:   #22c55e;
+      --green-l: #4ade80;
+      --red:     #f87171;
+      --amber:   #fbbf24;
+      --np-shadow: rgba(0,0,0,.4);
+      --np-bg:   #374151;
+      --np-text: #f9fafb;
+      --phone-placeholder: #6b7280;
+      --scrollbar: rgba(255,255,255,.1);
     }
 
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
     body {
       font-family: 'IBM Plex Sans Thai', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      overflow-x: hidden;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; overflow-x: hidden;
+      transition: background .3s, color .3s;
     }
-
-    /* subtle dot grid bg */
     body::before {
       content: '';
       position: fixed; inset: 0;
-      background-image: radial-gradient(circle, #c8c5be 1px, transparent 1px);
-      background-size: 24px 24px;
-      opacity: .35;
-      pointer-events: none;
-      z-index: 0;
+      background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+      background-size: 24px 24px; opacity: .35;
+      pointer-events: none; z-index: 0;
     }
-
     .layer { position: relative; z-index: 1; }
+
+    /* ── THEME TOGGLE ── */
+    .theme-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--faint); border: 1.5px solid var(--border);
+      color: var(--text); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s; font-size: 1rem;
+    }
+    .theme-btn:active { opacity: .7; }
 
     /* ── NUMPAD ── */
     .np-btn {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 1.5rem;
-      font-weight: 600;
-      background: var(--surface);
+      font-size: 1.5rem; font-weight: 600;
+      background: var(--np-bg);
       border: 1.5px solid var(--border);
-      border-radius: 14px;
-      color: var(--ink);
+      border-radius: 14px; color: var(--np-text);
       width: 100%; aspect-ratio: 1.3;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       transition: background .1s, transform .1s, box-shadow .1s;
-      box-shadow: 0 2px 0 var(--border);
+      box-shadow: 0 2px 0 var(--np-shadow);
       user-select: none;
     }
-    .np-btn:active { background: #f0ede8; transform: translateY(2px); box-shadow: none; }
-    .np-btn.del  { background: #fff5f5; border-color: #fca5a5; color: var(--red); }
-    .np-btn.ok   { background: var(--green); border-color: #15803d; color: #fff; box-shadow: 0 3px 0 #15803d; }
-    .np-btn.ok:active { box-shadow: none; background: #15803d; }
+    .np-btn:active { background: var(--faint); transform: translateY(2px); box-shadow: none; }
+    .np-btn.del { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); color: var(--red); }
+    .np-btn.ok  { background: var(--green); border-color: transparent; color: #fff; box-shadow: 0 3px 0 #15803d; }
+    .np-btn.ok:active { box-shadow: none; filter: brightness(.9); }
 
-    /* phone display */
+    /* ── PHONE BOX ── */
     .phone-box {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 2rem;
-      font-weight: 600;
-      letter-spacing: .12em;
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 20px;
-      text-align: center;
-      color: var(--ink);
-      min-height: 68px;
-      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; font-weight: 600; letter-spacing: .12em;
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 14px 20px;
+      text-align: center; color: var(--ink);
+      min-height: 68px; display: flex; align-items: center; justify-content: center;
     }
-    .phone-box.placeholder { color: #c4bfba; }
+    .phone-box.placeholder { color: var(--phone-placeholder); }
 
-    /* pin dots */
+    /* ── PIN DOTS ── */
     .pin-dot {
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      background: transparent;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--border); background: transparent;
       transition: background .15s, border-color .15s, transform .2s;
     }
     .pin-dot.filled { background: var(--green); border-color: var(--green); transform: scale(1.15); }
 
-    /* ── QUEUE CARD ── */
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-16px) scale(.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+    /* ── TABS ── */
+    .tab-bar { display: flex; background: var(--faint); border-radius: 12px; padding: 4px; gap: 2px; }
+    .tab-btn {
+      flex: 1; font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: .8rem; font-weight: 600;
+      padding: 9px 0; border-radius: 9px; border: none; cursor: pointer;
+      transition: background .2s, color .2s;
+      color: var(--muted); background: transparent;
     }
+    .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+
+    /* ── QUEUE CARD ── */
+    @keyframes slideDown { from{opacity:0;transform:translateY(-16px) scale(.97);} to{opacity:1;transform:translateY(0) scale(1);} }
     .queue-card {
       animation: slideDown .3s cubic-bezier(.34,1.56,.64,1) both;
-      background: var(--surface);
-      border: 1.5px solid var(--border);
+      background: var(--surface); border: 1.5px solid var(--border);
       border-left: 4px solid var(--green);
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.07);
+      border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.07);
     }
-    .queue-card.approving { opacity: .5; pointer-events: none; transition: opacity .2s; }
+    .queue-card.approving { opacity:.5; pointer-events:none; transition:opacity .2s; }
 
-    @keyframes badgePulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,.4); }
-      50%      { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
-    }
+    @keyframes badgePulse { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4);} 50%{box-shadow:0 0 0 8px rgba(34,197,94,0);} }
     .new-badge { animation: badgePulse 1.5s ease-out 3; }
 
-    /* ── APPROVE BTN ── */
+    /* ── BUTTONS ── */
     .approve-btn {
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-weight: 700;
-      font-size: 1rem;
-      background: var(--green);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 13px 22px;
-      cursor: pointer;
-      transition: background .12s, transform .1s;
-      white-space: nowrap;
+      font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 700; font-size: 1rem;
+      background: var(--green); color: #fff; border: none;
+      border-radius: 12px; padding: 13px 22px; cursor: pointer;
+      transition: background .12s, transform .1s; white-space: nowrap;
     }
-    .approve-btn:active { background: #15803d; transform: scale(.96); }
+    .approve-btn:active { filter: brightness(.9); transform: scale(.96); }
 
-    /* ── ADD BTN ── */
     .add-btn {
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-weight: 700;
-      font-size: 1.1rem;
-      background: var(--green);
-      color: #fff;
-      border: none;
-      border-radius: 16px;
-      width: 100%;
-      padding: 18px 0;
-      cursor: pointer;
+      font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 700; font-size: 1.1rem;
+      background: var(--green); color: #fff; border: none;
+      border-radius: 16px; width: 100%; padding: 18px 0; cursor: pointer;
       transition: background .12s, transform .1s;
       box-shadow: 0 3px 0 #15803d;
     }
-    .add-btn:active { background: #15803d; transform: translateY(3px); box-shadow: none; }
+    .add-btn:active { filter: brightness(.9); transform: translateY(3px); box-shadow: none; }
     .add-btn:disabled { background: #86efac; box-shadow: none; cursor: not-allowed; }
 
-    /* ── TOAST ── */
-    @keyframes toastIn  { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
-    @keyframes toastOut { from { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } to { opacity:0; transform:translateX(-50%) translateY(16px) scale(.95); } }
-    .toast {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-      z-index: 9999; white-space: nowrap;
-      font-family: 'IBM Plex Sans Thai', sans-serif; font-size: .9rem; font-weight: 500;
-      padding: 12px 22px; border-radius: 50px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.15);
-      animation: toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+    /* ── CUSTOMER HISTORY TABLE ── */
+    .cust-row {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 14px 16px;
+      cursor: pointer; transition: background .15s;
     }
-    .toast.out { animation: toastOut .3s ease forwards; }
+    .cust-row:hover { background: var(--faint); }
+    .cust-row + .cust-row { margin-top: 8px; }
+
+    /* ── SEARCH BOX ── */
+    .search-box {
+      width: 100%; font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: .95rem; padding: 12px 14px;
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 12px; color: var(--text);
+      outline: none; transition: border-color .2s;
+    }
+    .search-box:focus { border-color: var(--green); }
+    .search-box::placeholder { color: var(--muted); }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 800; display: flex; align-items: flex-end; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-sheet {
+      background: var(--surface); width: 100%; max-width: 480px;
+      border-radius: 24px 24px 0 0; padding: 24px 20px 40px;
+      max-height: 80dvh; overflow-y: auto;
+    }
+    @keyframes sheetUp { from{transform:translateY(100%);} to{transform:translateY(0);} }
+    .modal-sheet { animation: sheetUp .3s cubic-bezier(.34,1.56,.64,1); }
+
+    /* ── TOAST ── */
+    @keyframes toastIn  { from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.95);} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);} }
+    @keyframes toastOut { from{opacity:1;transform:translateX(-50%) translateY(0) scale(1);} to{opacity:0;transform:translateX(-50%) translateY(16px) scale(.95);} }
+    .toast {
+      position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+      z-index:9999; white-space:nowrap;
+      font-family:'IBM Plex Sans Thai',sans-serif; font-size:.9rem; font-weight:500;
+      padding:12px 22px; border-radius:50px; box-shadow:0 8px 24px rgba(0,0,0,.15);
+      animation:toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    .toast.out { animation:toastOut .3s ease forwards; }
 
     /* ── FADE ── */
-    @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
     .fade-up { animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both; }
     .d1{animation-delay:.08s} .d2{animation-delay:.16s} .d3{animation-delay:.24s} .d4{animation-delay:.32s}
 
-    /* ── DIVIDER ── */
+    /* ── LABELS ── */
     .section-label {
-      font-size: .7rem; font-weight: 600; letter-spacing: .12em;
-      text-transform: uppercase; color: var(--muted);
+      font-size:.7rem; font-weight:600; letter-spacing:.12em;
+      text-transform:uppercase; color:var(--muted);
     }
 
-    /* ── POLLING INDICATOR ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── SPINNER ── */
+    @keyframes spin { to{transform:rotate(360deg);} }
     .spin { animation: spin .8s linear infinite; }
 
-    /* scrollbar */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    /* iPad split layout */
-    @media (min-width: 768px) {
-      .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    /* ── SPLIT ── */
+    @media (min-width:768px) {
+      .split-layout { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
     }
 
-    /* login pin large */
-    .pin-login-np .np-btn { font-size: 1.8rem; aspect-ratio: 1.5; }
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:var(--scrollbar); border-radius:4px; }
+
+    /* ── LOGIN PIN LARGE ── */
+    .pin-login-np .np-btn { font-size:1.8rem; aspect-ratio:1.5; }
+
+    /* ── RATE LIMIT BADGE ── */
+    .rate-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      font-size:.7rem; font-weight:600; padding:3px 8px;
+      border-radius:50px; background:rgba(220,38,38,.1); color:var(--red);
+    }
+
+    /* ── STAT CARD ── */
+    .stat-card {
+      background:var(--surface); border:1.5px solid var(--border);
+      border-radius:16px; padding:16px; text-align:center;
+    }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════ ERROR ═══════════════════════════════════ -->
+<!-- ══════════ ERROR ══════════ -->
 <div id="page-error" class="layer hidden min-h-dvh flex flex-col items-center justify-center px-6 text-center">
   <div class="text-5xl mb-4">🏪</div>
-  <h2 class="text-xl font-bold text-stone-800 mb-2" style="font-family:'IBM Plex Sans Thai',sans-serif">ไม่พบข้อมูลร้านค้า</h2>
-  <p class="text-stone-400 text-sm">ตรวจสอบ URL หรือสแกน QR Code ใหม่อีกครั้ง</p>
+  <h2 class="text-xl font-bold mb-2">ไม่พบข้อมูลร้านค้า</h2>
+  <p style="color:var(--muted)" class="text-sm">ตรวจสอบ URL หรือสแกน QR Code ใหม่อีกครั้ง</p>
 </div>
 
-<!-- ═══════════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<!-- ══════════ LOGIN ══════════ -->
 <div id="page-login" class="layer hidden min-h-dvh flex flex-col items-center justify-center px-5 py-10" style="max-width:360px;margin:auto;">
 
+  <div class="w-full flex justify-end mb-4">
+    <button class="theme-btn" onclick="toggleTheme()" id="login-theme-btn">🌙</button>
+  </div>
+
   <div class="fade-up text-center mb-8">
-    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-stone-800 mb-4 shadow-lg">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:var(--ink)">
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="11" width="18" height="11" rx="2" stroke="#fff" stroke-width="1.8"/>
         <path d="M7 11V7a5 5 0 0110 0v4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
         <circle cx="12" cy="16" r="1.5" fill="#22c55e"/>
       </svg>
     </div>
-    <h1 class="text-2xl font-bold text-stone-800" style="font-family:'IBM Plex Sans Thai',sans-serif">เข้าสู่ระบบร้านค้า</h1>
-    <p class="text-stone-400 text-sm mt-1">กรอกรหัสผ่าน 4 หลัก</p>
+    <h1 class="text-2xl font-bold">เข้าสู่ระบบร้านค้า</h1>
+    <p style="color:var(--muted)" class="text-sm mt-1">กรอกรหัสผ่าน 4 หลัก</p>
   </div>
 
   <!-- PIN display -->
@@ -220,6 +279,11 @@
     <div class="pin-dot" id="pd1"></div>
     <div class="pin-dot" id="pd2"></div>
     <div class="pin-dot" id="pd3"></div>
+  </div>
+
+  <!-- Rate limit warning -->
+  <div id="lockout-banner" class="hidden mb-4 text-center">
+    <span class="rate-badge">🔒 <span id="lockout-text">ลองใหม่ใน 30 วินาที</span></span>
   </div>
 
   <!-- Numpad -->
@@ -251,241 +315,306 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PLAN S ═══════════════════════════════════ -->
+<!-- ══════════ PLAN S ══════════ -->
 <div id="page-plan-s" class="layer hidden min-h-dvh flex flex-col px-4 py-5" style="max-width:440px;margin:auto;">
 
-  <!-- Header -->
   <div class="fade-up flex items-center justify-between mb-5">
     <div>
       <p class="section-label">โหมดร้านค้า</p>
-      <h2 class="text-lg font-bold text-stone-800 mt-0.5" style="font-family:'IBM Plex Sans Thai',sans-serif" id="s-shop-name">—</h2>
+      <h2 class="text-lg font-bold mt-0.5" id="s-shop-name">—</h2>
     </div>
     <div class="flex items-center gap-2">
-      <span class="text-xs bg-stone-100 border border-stone-200 text-stone-500 rounded-full px-3 py-1 font-medium">PLAN S</span>
-      <button onclick="doLogout()" class="text-stone-400 hover:text-stone-600 transition-colors p-1">
+      <button class="theme-btn" onclick="toggleTheme()" id="s-theme-btn">🌙</button>
+      <span class="text-xs rounded-full px-3 py-1 font-medium" style="background:var(--faint);border:1px solid var(--border);color:var(--muted)">PLAN S</span>
+      <button onclick="doLogout()" class="theme-btn" title="ออกจากระบบ">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
   </div>
 
-  <div class="fade-up d1 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex gap-3 items-start">
-    <span class="text-xl">✏️</span>
-    <p class="text-amber-800 text-sm leading-relaxed">คีย์เบอร์โทรลูกค้าและกด <strong>เพิ่ม 1 แต้ม</strong> เพื่อบันทึกแต้มสะสม</p>
+  <!-- Tabs (Plan S) -->
+  <div class="fade-up d1 tab-bar mb-5">
+    <button class="tab-btn active" id="s-tab-add" onclick="sSwitch('add')">➕ เพิ่มแต้ม</button>
+    <button class="tab-btn" id="s-tab-history" onclick="sSwitch('history')">👥 ลูกค้า</button>
   </div>
 
-  <!-- Phone input -->
-  <div class="fade-up d2 mb-4">
-    <p class="section-label mb-2">เบอร์โทรลูกค้า</p>
-    <div class="phone-box placeholder" id="s-phone-display">กรอกเบอร์โทร</div>
-  </div>
-
-  <!-- Numpad Plan S -->
-  <div class="fade-up d3 mb-4">
-    <div class="grid grid-cols-3 gap-3 mb-3">
-      <button class="np-btn" onclick="sNumPress('1')">1</button>
-      <button class="np-btn" onclick="sNumPress('2')">2</button>
-      <button class="np-btn" onclick="sNumPress('3')">3</button>
-      <button class="np-btn" onclick="sNumPress('4')">4</button>
-      <button class="np-btn" onclick="sNumPress('5')">5</button>
-      <button class="np-btn" onclick="sNumPress('6')">6</button>
-      <button class="np-btn" onclick="sNumPress('7')">7</button>
-      <button class="np-btn" onclick="sNumPress('8')">8</button>
-      <button class="np-btn" onclick="sNumPress('9')">9</button>
-      <button class="np-btn del" onclick="sNumDelete()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </button>
-      <button class="np-btn" onclick="sNumPress('0')">0</button>
-      <button class="np-btn del" onclick="sNumClear()" style="font-size:.9rem;">ล้าง</button>
+  <!-- Pane: add -->
+  <div id="s-pane-add">
+    <div class="fade-up d1 rounded-2xl p-4 mb-5 flex gap-3 items-start" style="background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.2)">
+      <span class="text-xl">✏️</span>
+      <p style="color:#92400e" class="text-sm leading-relaxed">คีย์เบอร์โทรลูกค้าและกด <strong>เพิ่ม 1 แต้ม</strong></p>
+    </div>
+    <div class="fade-up d2 mb-4">
+      <p class="section-label mb-2">เบอร์โทรลูกค้า</p>
+      <div class="phone-box placeholder" id="s-phone-display">กรอกเบอร์โทร</div>
+    </div>
+    <div class="fade-up d3 mb-4">
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <button class="np-btn" onclick="sNumPress('1')">1</button>
+        <button class="np-btn" onclick="sNumPress('2')">2</button>
+        <button class="np-btn" onclick="sNumPress('3')">3</button>
+        <button class="np-btn" onclick="sNumPress('4')">4</button>
+        <button class="np-btn" onclick="sNumPress('5')">5</button>
+        <button class="np-btn" onclick="sNumPress('6')">6</button>
+        <button class="np-btn" onclick="sNumPress('7')">7</button>
+        <button class="np-btn" onclick="sNumPress('8')">8</button>
+        <button class="np-btn" onclick="sNumPress('9')">9</button>
+        <button class="np-btn del" onclick="sNumDelete()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="np-btn" onclick="sNumPress('0')">0</button>
+        <button class="np-btn del" onclick="sNumClear()" style="font-size:.9rem;">ล้าง</button>
+      </div>
+    </div>
+    <div class="fade-up d4">
+      <button class="add-btn" id="s-add-btn" onclick="doManualAdd()">➕ เพิ่ม 1 แต้ม</button>
     </div>
   </div>
 
-  <div class="fade-up d4">
-    <button class="add-btn" id="s-add-btn" onclick="doManualAdd()">➕ เพิ่ม 1 แต้ม</button>
+  <!-- Pane: history -->
+  <div id="s-pane-history" class="hidden">
+    <input class="search-box mb-4" id="s-search" type="tel" placeholder="🔍 ค้นหาเบอร์โทร..." oninput="filterCustomers('s')">
+    <div id="s-cust-loading" class="text-center py-8" style="color:var(--muted)">⏳ กำลังโหลด...</div>
+    <div id="s-cust-list" class="hidden"></div>
+    <div id="s-cust-empty" class="hidden text-center py-8" style="color:var(--muted)">ไม่มีลูกค้า</div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PLAN M/L ═══════════════════════════════════ -->
+<!-- ══════════ PLAN M/L ══════════ -->
 <div id="page-plan-ml" class="layer hidden min-h-dvh flex flex-col px-4 py-5 pb-8" style="max-width:900px;margin:auto;">
 
-  <!-- Header -->
   <div class="fade-up flex items-center justify-between mb-5">
     <div>
       <p class="section-label">จัดการร้านค้า</p>
-      <h2 class="text-lg font-bold text-stone-800 mt-0.5" style="font-family:'IBM Plex Sans Thai',sans-serif" id="ml-shop-name">—</h2>
+      <h2 class="text-lg font-bold mt-0.5" id="ml-shop-name">—</h2>
     </div>
     <div class="flex items-center gap-2">
-      <span id="ml-plan-badge" class="text-xs bg-stone-800 text-white rounded-full px-3 py-1 font-medium">PLAN M</span>
-      <div id="poll-indicator" class="flex items-center gap-1.5 text-xs text-stone-400">
-        <div class="w-3.5 h-3.5 spin" id="spin-icon">
+      <button class="theme-btn" onclick="toggleTheme()" id="ml-theme-btn">🌙</button>
+      <span id="ml-plan-badge" class="text-xs rounded-full px-3 py-1 font-medium" style="background:var(--ink);color:#fff">PLAN M</span>
+      <div id="poll-indicator" class="flex items-center gap-1.5 text-xs" style="color:var(--muted)">
+        <div class="w-3.5 h-3.5 spin">
           <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" stroke-dasharray="30 20"/></svg>
         </div>
         <span>Live</span>
       </div>
-      <button onclick="doLogout()" class="text-stone-400 hover:text-stone-600 transition-colors p-1">
+      <button onclick="doLogout()" class="theme-btn" title="ออกจากระบบ">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
   </div>
 
-  <div class="split-layout">
+  <!-- Tabs (Plan ML) -->
+  <div class="fade-up d1 tab-bar mb-5">
+    <button class="tab-btn active" id="ml-tab-main" onclick="mlSwitch('main')">🎯 คิว & เพิ่มแต้ม</button>
+    <button class="tab-btn" id="ml-tab-customers" onclick="mlSwitch('customers')">👥 ลูกค้า</button>
+  </div>
 
-    <!-- ── LEFT: Manual Add ── -->
-    <div>
-      <div class="flex items-center gap-2 mb-3">
-        <span class="section-label">คีย์มือ</span>
-        <span class="text-xs text-stone-400 font-normal">(ลูกค้าลืมมือถือ)</span>
-      </div>
-      <div class="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm">
-
-        <!-- phone display -->
-        <div class="phone-box placeholder mb-4" id="ml-phone-display">กรอกเบอร์โทร</div>
-
-        <!-- numpad -->
-        <div class="grid grid-cols-3 gap-2.5 mb-3">
-          <button class="np-btn" onclick="mlNumPress('1')">1</button>
-          <button class="np-btn" onclick="mlNumPress('2')">2</button>
-          <button class="np-btn" onclick="mlNumPress('3')">3</button>
-          <button class="np-btn" onclick="mlNumPress('4')">4</button>
-          <button class="np-btn" onclick="mlNumPress('5')">5</button>
-          <button class="np-btn" onclick="mlNumPress('6')">6</button>
-          <button class="np-btn" onclick="mlNumPress('7')">7</button>
-          <button class="np-btn" onclick="mlNumPress('8')">8</button>
-          <button class="np-btn" onclick="mlNumPress('9')">9</button>
-          <button class="np-btn del" onclick="mlNumDelete()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </button>
-          <button class="np-btn" onclick="mlNumPress('0')">0</button>
-          <button class="np-btn del" onclick="mlNumClear()" style="font-size:.85rem;">ล้าง</button>
+  <!-- Pane: main -->
+  <div id="ml-pane-main">
+    <div class="split-layout">
+      <!-- LEFT: Manual Add -->
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="section-label">คีย์มือ</span>
+          <span class="text-xs" style="color:var(--muted)">(ลูกค้าลืมมือถือ)</span>
         </div>
-
-        <button class="add-btn" id="ml-add-btn" onclick="doMLManualAdd()">➕ เพิ่ม 1 แต้ม</button>
-      </div>
-    </div>
-
-    <!-- ── RIGHT: Queue ── -->
-    <div>
-      <div class="flex items-center gap-2 mb-3">
-        <span class="section-label">คิวรออนุมัติ</span>
-        <span id="queue-count-badge" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-semibold new-badge">0</span>
-      </div>
-
-      <!-- Queue list -->
-      <div id="queue-list" class="flex flex-col gap-3">
-        <!-- Empty state -->
-        <div id="queue-empty" class="bg-white border border-stone-200 rounded-2xl p-8 text-center shadow-sm">
-          <div class="text-4xl mb-3">🟢</div>
-          <p class="text-stone-500 text-sm font-medium">ไม่มีคิวรออนุมัติ</p>
-          <p class="text-stone-400 text-xs mt-1">ระบบจะแจ้งเตือนเมื่อมีลูกค้าขอแต้ม</p>
+        <div class="rounded-2xl p-4 shadow-sm" style="background:var(--surface);border:1.5px solid var(--border)">
+          <div class="phone-box placeholder mb-4" id="ml-phone-display">กรอกเบอร์โทร</div>
+          <div class="grid grid-cols-3 gap-2.5 mb-3">
+            <button class="np-btn" onclick="mlNumPress('1')">1</button>
+            <button class="np-btn" onclick="mlNumPress('2')">2</button>
+            <button class="np-btn" onclick="mlNumPress('3')">3</button>
+            <button class="np-btn" onclick="mlNumPress('4')">4</button>
+            <button class="np-btn" onclick="mlNumPress('5')">5</button>
+            <button class="np-btn" onclick="mlNumPress('6')">6</button>
+            <button class="np-btn" onclick="mlNumPress('7')">7</button>
+            <button class="np-btn" onclick="mlNumPress('8')">8</button>
+            <button class="np-btn" onclick="mlNumPress('9')">9</button>
+            <button class="np-btn del" onclick="mlNumDelete()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button class="np-btn" onclick="mlNumPress('0')">0</button>
+            <button class="np-btn del" onclick="mlNumClear()" style="font-size:.85rem;">ล้าง</button>
+          </div>
+          <button class="add-btn" id="ml-add-btn" onclick="doMLManualAdd()">➕ เพิ่ม 1 แต้ม</button>
         </div>
       </div>
-    </div>
 
+      <!-- RIGHT: Queue -->
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="section-label">คิวรออนุมัติ</span>
+          <span id="queue-count-badge" class="hidden text-xs rounded-full px-2 py-0.5 font-semibold new-badge" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.25)">0</span>
+        </div>
+        <div id="queue-list" class="flex flex-col gap-3">
+          <div id="queue-empty" class="rounded-2xl p-8 text-center shadow-sm" style="background:var(--surface);border:1.5px solid var(--border)">
+            <div class="text-4xl mb-3">🟢</div>
+            <p class="text-sm font-medium" style="color:var(--muted)">ไม่มีคิวรออนุมัติ</p>
+            <p class="text-xs mt-1" style="color:var(--muted)">ระบบจะแจ้งเตือนเมื่อมีลูกค้าขอแต้ม</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pane: customers -->
+  <div id="ml-pane-customers" class="hidden">
+    <div class="flex gap-3 mb-4">
+      <input class="search-box flex-1" id="ml-search" type="tel" placeholder="🔍 ค้นหาเบอร์โทร..." oninput="filterCustomers('ml')">
+    </div>
+    <!-- Stats row -->
+    <div id="ml-stats" class="grid grid-cols-3 gap-3 mb-5 hidden">
+      <div class="stat-card">
+        <p class="heading text-2xl font-bold" id="stat-total-cust">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">ลูกค้าทั้งหมด</p>
+      </div>
+      <div class="stat-card">
+        <p class="heading text-2xl font-bold" id="stat-active-today">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">มาวันนี้</p>
+      </div>
+      <div class="stat-card">
+        <p class="heading text-2xl font-bold" id="stat-ready">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">ครบแลกแล้ว</p>
+      </div>
+    </div>
+    <div id="ml-cust-loading" class="text-center py-8" style="color:var(--muted)">⏳ กำลังโหลด...</div>
+    <div id="ml-cust-list" class="hidden"></div>
+    <div id="ml-cust-empty" class="hidden text-center py-8" style="color:var(--muted)">ไม่มีลูกค้า</div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ JAVASCRIPT ═══════════════════════════════════ -->
+<!-- ══════════ CUSTOMER DETAIL MODAL ══════════ -->
+<div id="cust-modal" class="hidden modal-backdrop" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <p class="section-label">รายละเอียดลูกค้า</p>
+        <h3 class="font-bold text-lg" style="font-family:'IBM Plex Mono',monospace" id="cust-modal-phone">—</h3>
+      </div>
+      <button onclick="document.getElementById('cust-modal').classList.add('hidden')" class="theme-btn">✕</button>
+    </div>
+    <div id="cust-modal-body"></div>
+  </div>
+</div>
+
 <script>
-// ─────────────────────────────────────
+// ════════════════════════════════════════════════
 //  CONFIG
-// ─────────────────────────────────────
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyQs5KrWL9zvN8gr9dOHr5UgI8MMEbNqGOaQUcYFKhBN18JqUiOewlzVVndD6I0UgI9/exec';
+// ════════════════════════════════════════════════
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby-5p7TDLgkMw8UIfs5DAjfQAnYgiDPFD0IYDI29qftVglxyKsOL9ORj8PdXMZ1N5yx/exec';
 const POLL_INTERVAL_MS = 5000;
 
-// ─────────────────────────────────────
-//  STATE
-// ─────────────────────────────────────
-let shopId     = null;
-let password   = null;
-let planType   = null;
-let pinBuffer  = '';
-let sBuf       = '';   // Plan S phone buffer
-let mlBuf      = '';   // Plan ML phone buffer
-let pollTimer  = null;
-let knownQueue = new Set();   // requestIds already shown
-let isPolling  = false;
+// ── BRUTE FORCE PROTECTION ──
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30000; // 30 วินาที
+let failedAttempts = 0;
+let lockoutUntil   = 0;
+let lockoutTimer   = null;
 
-// ─────────────────────────────────────
-//  INIT
-// ─────────────────────────────────────
+// ── STATE ──
+let shopId=null, password=null, planType=null;
+let pinBuffer='', sBuf='', mlBuf='';
+let pollTimer=null, knownQueue=new Set(), isPolling=false;
+let customersCache=[]; // raw list
+let currentTab_s='add', currentTab_ml='main';
+let custLoaded=false;
+
+// ── THEME ──
+function getTheme() { return localStorage.getItem('shopTheme') || 'light'; }
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  const icon = t === 'dark' ? '☀️' : '🌙';
+  document.querySelectorAll('#login-theme-btn,#s-theme-btn,#ml-theme-btn').forEach(b => { if(b) b.textContent=icon; });
+  localStorage.setItem('shopTheme', t);
+}
+function toggleTheme() { applyTheme(getTheme()==='dark' ? 'light' : 'dark'); }
+
+// ── INIT ──
 async function init() {
-  const p = new URLSearchParams(window.location.search);
-  shopId = p.get('shop');
+  applyTheme(getTheme());
+  const p=new URLSearchParams(window.location.search);
+  const rawShop=p.get('shop')||'';
+  shopId=rawShop.match(/^[0-9a-z]{6,}$/)?decodeSlug(rawShop):rawShop;
   if (!shopId) { showPage('page-error'); return; }
-
   const saved = sessionStorage.getItem('shopPass_' + shopId);
-  if (saved) {
-    password = saved;
-    // Skip login — go directly to main UI (password already verified before)
-    await proceedAfterLogin();
-  } else {
-    showPage('page-login');
-  }
+  if (saved) { password = saved; await proceedAfterLogin(); }
+  else showPage('page-login');
 }
 
-// ─────────────────────────────────────
-//  PIN LOGIN
-// ─────────────────────────────────────
+// ── PAGE ──
+function showPage(id) {
+  ['page-error','page-login','page-plan-s','page-plan-ml'].forEach(p=>
+    document.getElementById(p).classList.toggle('hidden', p!==id));
+}
+
+// ── LOCKOUT CHECK ──
+function isLockedOut() { return Date.now() < lockoutUntil; }
+function startLockout() {
+  lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
+  const banner = document.getElementById('lockout-banner');
+  const text   = document.getElementById('lockout-text');
+  banner.classList.remove('hidden');
+  const update = () => {
+    const remaining = Math.ceil((lockoutUntil - Date.now())/1000);
+    if (remaining <= 0) { banner.classList.add('hidden'); clearInterval(lockoutTimer); return; }
+    text.textContent = `ลองใหม่ใน ${remaining} วินาที`;
+  };
+  update();
+  lockoutTimer = setInterval(update, 1000);
+}
+
+// ── PIN LOGIN ──
 function pinPress(d) {
+  if (isLockedOut()) return;
   if (pinBuffer.length >= 4) return;
-  pinBuffer += d;
-  updatePinDots();
+  pinBuffer += d; updatePinDots();
   if (pinBuffer.length === 4) setTimeout(pinConfirm, 120);
 }
-function pinDelete() {
-  pinBuffer = pinBuffer.slice(0,-1);
-  updatePinDots();
-}
+function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
 function updatePinDots() {
-  for (let i=0;i<4;i++) {
-    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
-  }
+  for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled', i<pinBuffer.length);
 }
 async function pinConfirm() {
-  if (pinBuffer.length !== 4) return;
+  if (pinBuffer.length !== 4 || isLockedOut()) return;
   password = pinBuffer;
   const ok = await verifyPassword();
   if (!ok) {
+    failedAttempts++;
     document.getElementById('login-error').classList.remove('hidden');
-    pinBuffer = '';
-    updatePinDots();
     setTimeout(() => document.getElementById('login-error').classList.add('hidden'), 2500);
-    return;
+    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      failedAttempts = 0;
+      startLockout();
+    }
+    pinBuffer = ''; updatePinDots(); return;
   }
-  sessionStorage.setItem('shopPass_' + shopId, password);
+  failedAttempts = 0;
+  sessionStorage.setItem('shopPass_'+shopId, password);
   proceedAfterLogin();
 }
-
 async function verifyPassword() {
-  try {
-    // get_queue requires a valid password — fastest way to verify
-    const r = await apiPost({ action:'get_queue', shopId, password });
-    return r.success === true;
-  } catch { return false; }
+  try { const r = await apiPost({action:'get_queue',shopId,password}); return r.success===true; }
+  catch { return false; }
 }
 
-// ─────────────────────────────────────
-//  AFTER LOGIN
-// ─────────────────────────────────────
+// ── AFTER LOGIN ──
 async function proceedAfterLogin() {
   let shopName = `ร้านค้า #${shopId}`;
   try {
-    // Use a throwaway phone number just to get shop metadata (check_points auto-creates customer if needed)
-    // NOTE: GAS returns shop.name (not shopName)
-    const data = await apiPost({ action:'check_points', shopId, phone:'0000000000' });
+    const data = await apiPost({action:'check_points',shopId,phone:'0000000000'});
     if (data.success && data.shop) {
-      planType  = (data.shop.planType || 'S').toUpperCase();
-      shopName  = data.shop.name || data.shop.shopName || shopName;
+      planType = (data.shop.planType||'S').toUpperCase();
+      shopName = data.shop.name || shopName;
     }
-  } catch (e) {
-    planType = 'S'; // fallback
-  }
+  } catch { planType='S'; }
 
+  applyTheme(getTheme());
   if (planType === 'S') {
     document.getElementById('s-shop-name').textContent = shopName;
     showPage('page-plan-s');
   } else {
     document.getElementById('ml-shop-name').textContent = shopName;
-    document.getElementById('ml-plan-badge').textContent = 'PLAN ' + planType;
+    document.getElementById('ml-plan-badge').textContent = 'PLAN '+planType;
     showPage('page-plan-ml');
     startPolling();
   }
@@ -493,283 +622,331 @@ async function proceedAfterLogin() {
 
 function doLogout() {
   if (!confirm('ออกจากระบบใช่ไหม?')) return;
-  sessionStorage.removeItem('shopPass_' + shopId);
+  sessionStorage.removeItem('shopPass_'+shopId);
   stopPolling();
-  password = null; pinBuffer = ''; planType = null;
-  updatePinDots();
-  showPage('page-login');
+  password=null; pinBuffer=''; planType=null; custLoaded=false; customersCache=[];
+  updatePinDots(); showPage('page-login');
 }
 
-// ─────────────────────────────────────
-//  PLAN S — NUMPAD
-// ─────────────────────────────────────
+// ── TABS PLAN S ──
+function sSwitch(tab) {
+  currentTab_s = tab;
+  document.getElementById('s-tab-add').classList.toggle('active', tab==='add');
+  document.getElementById('s-tab-history').classList.toggle('active', tab==='history');
+  document.getElementById('s-pane-add').classList.toggle('hidden', tab!=='add');
+  document.getElementById('s-pane-history').classList.toggle('hidden', tab!=='history');
+  if (tab==='history' && !custLoaded) loadCustomers('s');
+}
+
+// ── TABS PLAN ML ──
+function mlSwitch(tab) {
+  currentTab_ml = tab;
+  document.getElementById('ml-tab-main').classList.toggle('active', tab==='main');
+  document.getElementById('ml-tab-customers').classList.toggle('active', tab==='customers');
+  document.getElementById('ml-pane-main').classList.toggle('hidden', tab!=='main');
+  document.getElementById('ml-pane-customers').classList.toggle('hidden', tab!=='customers');
+  if (tab==='customers' && !custLoaded) loadCustomers('ml');
+}
+
+// ── LOAD CUSTOMERS ──
+async function loadCustomers(prefix) {
+  document.getElementById(`${prefix}-cust-loading`).classList.remove('hidden');
+  document.getElementById(`${prefix}-cust-list`).classList.add('hidden');
+  document.getElementById(`${prefix}-cust-empty`).classList.add('hidden');
+  try {
+    const r = await apiPost({action:'get_shop_customers', shopId, password});
+    custLoaded = true;
+    customersCache = r.customers || [];
+    document.getElementById(`${prefix}-cust-loading`).classList.add('hidden');
+
+    // Stats (ML only)
+    if (prefix==='ml') {
+      const today = new Date().toLocaleDateString('th-TH');
+      const activeToday = customersCache.filter(c => (c.lastVisit||'').includes(today)).length;
+      const shopMaxPts  = customersCache[0]?.maxPoints || 0;
+      const ready = customersCache.filter(c => c.currentPoints >= shopMaxPts).length;
+      document.getElementById('stat-total-cust').textContent = customersCache.length;
+      document.getElementById('stat-active-today').textContent = activeToday;
+      document.getElementById('stat-ready').textContent = ready;
+      document.getElementById('ml-stats').classList.remove('hidden');
+    }
+
+    renderCustomers(prefix, customersCache);
+  } catch(e) {
+    document.getElementById(`${prefix}-cust-loading`).classList.add('hidden');
+    document.getElementById(`${prefix}-cust-empty`).classList.remove('hidden');
+  }
+}
+
+function filterCustomers(prefix) {
+  const q = document.getElementById(`${prefix}-search`).value.trim();
+  const filtered = q ? customersCache.filter(c => c.phone.includes(q)) : customersCache;
+  renderCustomers(prefix, filtered);
+}
+
+function renderCustomers(prefix, list) {
+  const el = document.getElementById(`${prefix}-cust-list`);
+  const emptyEl = document.getElementById(`${prefix}-cust-empty`);
+  if (!list || list.length===0) { el.classList.add('hidden'); emptyEl.classList.remove('hidden'); return; }
+  emptyEl.classList.add('hidden');
+  el.innerHTML = '';
+  list.forEach(c => {
+    const maxPts = c.maxPoints || 10;
+    const pct = Math.min(100, Math.round((c.currentPoints/maxPts)*100));
+    const div = document.createElement('div');
+    div.className = 'cust-row';
+    div.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-bold text-sm" style="font-family:'IBM Plex Mono',monospace">${fmtPhone(c.phone)}</p>
+          <p class="text-xs mt-0.5" style="color:var(--muted)">ล่าสุด: ${c.lastVisit||'—'} · มา ${c.totalVisits||0} ครั้ง</p>
+        </div>
+        <div class="text-right flex-shrink-0 ml-3">
+          <p class="font-bold text-base">${c.currentPoints}<span class="text-xs font-normal" style="color:var(--muted)">/${maxPts}</span></p>
+          ${c.currentPoints >= maxPts ? '<span class="text-xs" style="color:var(--green)">✅ ครบแล้ว</span>' : ''}
+        </div>
+      </div>
+      <div style="background:var(--faint);border-radius:99px;height:5px;overflow:hidden;margin-top:10px">
+        <div style="background:var(--green);height:100%;width:${pct}%;border-radius:99px"></div>
+      </div>
+    `;
+    div.onclick = () => showCustDetail(c);
+    el.appendChild(div);
+  });
+  el.classList.remove('hidden');
+}
+
+function showCustDetail(c) {
+  document.getElementById('cust-modal-phone').textContent = fmtPhone(c.phone);
+  const maxPts = c.maxPoints || 10;
+  const pct = Math.min(100, Math.round((c.currentPoints/maxPts)*100));
+  const rows = (c.logs || []).map(l=>
+    `<div class="flex justify-between py-2" style="border-bottom:1px solid var(--border)">
+      <span class="text-sm" style="color:var(--muted)">${l.date}</span>
+      <span class="font-semibold text-sm">+${l.points} แต้ม</span>
+    </div>`
+  ).join('');
+  document.getElementById('cust-modal-body').innerHTML = `
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="stat-card"><p class="heading text-2xl font-bold">${c.currentPoints}<span class="text-sm">/${maxPts}</span></p><p class="text-xs mt-1" style="color:var(--muted)">แต้ม</p></div>
+      <div class="stat-card"><p class="heading text-2xl font-bold">${c.totalVisits||0}</p><p class="text-xs mt-1" style="color:var(--muted)">ครั้ง</p></div>
+      <div class="stat-card"><p class="heading text-2xl font-bold">${pct}%</p><p class="text-xs mt-1" style="color:var(--muted)">ความคืบหน้า</p></div>
+    </div>
+    <div style="background:var(--faint);border-radius:99px;height:6px;overflow:hidden;margin-bottom:20px">
+      <div style="background:var(--green);height:100%;width:${pct}%;border-radius:99px"></div>
+    </div>
+    <p class="section-label mb-3">ประวัติการรับแต้ม</p>
+    ${rows || '<p class="text-sm text-center py-4" style="color:var(--muted)">ไม่มีข้อมูล</p>'}
+  `;
+  document.getElementById('cust-modal').classList.remove('hidden');
+}
+
+// ── PLAN S NUMPAD ──
 function sNumPress(d) { if(sBuf.length>=10) return; sBuf+=d; updateSDisplay(); }
 function sNumDelete() { sBuf=sBuf.slice(0,-1); updateSDisplay(); }
 function sNumClear()  { sBuf=''; updateSDisplay(); }
 function updateSDisplay() {
-  const el = document.getElementById('s-phone-display');
-  if (!sBuf) { el.textContent='กรอกเบอร์โทร'; el.classList.add('placeholder'); return; }
-  el.classList.remove('placeholder');
-  el.textContent = fmtPhone(sBuf);
+  const el=document.getElementById('s-phone-display');
+  if(!sBuf){el.textContent='กรอกเบอร์โทร';el.classList.add('placeholder');return;}
+  el.classList.remove('placeholder'); el.textContent=fmtPhone(sBuf);
 }
-
 async function doManualAdd() {
-  if (sBuf.length !== 10) { showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706'); return; }
-  const btn = document.getElementById('s-add-btn');
-  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  if(sBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
+  const btn=document.getElementById('s-add-btn');
+  btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
-    const r = await apiPost({ action:'manual_add', shopId, password, phone:sBuf });
-    if (!r.success) throw new Error(r.error);
-    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`, '#16a34a');
-    sBuf=''; updateSDisplay();
-  } catch(e) {
-    showToast('❌ เกิดข้อผิดพลาด: ' + e.message, '#dc2626');
-  } finally {
-    btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม';
-  }
+    const r=await apiPost({action:'manual_add',shopId,password,phone:sBuf});
+    if(!r.success) throw new Error(r.error);
+    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
+    sBuf=''; updateSDisplay(); custLoaded=false;
+  } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
+  finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
 
-// ─────────────────────────────────────
-//  PLAN ML — NUMPAD
-// ─────────────────────────────────────
+// ── PLAN ML NUMPAD ──
 function mlNumPress(d) { if(mlBuf.length>=10) return; mlBuf+=d; updateMLDisplay(); }
 function mlNumDelete() { mlBuf=mlBuf.slice(0,-1); updateMLDisplay(); }
 function mlNumClear()  { mlBuf=''; updateMLDisplay(); }
 function updateMLDisplay() {
-  const el = document.getElementById('ml-phone-display');
-  if (!mlBuf) { el.textContent='กรอกเบอร์โทร'; el.classList.add('placeholder'); return; }
-  el.classList.remove('placeholder');
-  el.textContent = fmtPhone(mlBuf);
+  const el=document.getElementById('ml-phone-display');
+  if(!mlBuf){el.textContent='กรอกเบอร์โทร';el.classList.add('placeholder');return;}
+  el.classList.remove('placeholder'); el.textContent=fmtPhone(mlBuf);
 }
-
 async function doMLManualAdd() {
-  if (mlBuf.length !== 10) { showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706'); return; }
-  const btn = document.getElementById('ml-add-btn');
+  if(mlBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
+  const btn=document.getElementById('ml-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
-    const r = await apiPost({ action:'manual_add', shopId, password, phone:mlBuf });
-    if (!r.success) throw new Error(r.error);
-    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`, '#16a34a');
-    mlBuf=''; updateMLDisplay();
-  } catch(e) {
-    showToast('❌ ' + e.message, '#dc2626');
-  } finally {
-    btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม';
-  }
+    const r=await apiPost({action:'manual_add',shopId,password,phone:mlBuf});
+    if(!r.success) throw new Error(r.error);
+    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
+    mlBuf=''; updateMLDisplay(); custLoaded=false;
+  } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
+  finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
 
-// ─────────────────────────────────────
-//  POLLING
-// ─────────────────────────────────────
-function startPolling() {
-  fetchQueue();
-  pollTimer = setInterval(fetchQueue, POLL_INTERVAL_MS);
-}
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer=null; }
-}
-
+// ── POLLING ──
+function startPolling() { fetchQueue(); pollTimer=setInterval(fetchQueue,POLL_INTERVAL_MS); }
+function stopPolling()  { if(pollTimer){clearInterval(pollTimer);pollTimer=null;} }
 async function fetchQueue() {
-  if (isPolling) return;
-  isPolling = true;
-  try {
-    const r = await apiPost({ action:'get_queue', shopId, password });
-    if (!r.success) return;
-    renderQueue(r.queue || []);
-  } catch(_) {
-    // silently fail on poll
-  } finally {
-    isPolling = false;
-  }
+  if(isPolling) return; isPolling=true;
+  try { const r=await apiPost({action:'get_queue',shopId,password}); if(r.success) renderQueue(r.queue||[]); }
+  catch(_) {} finally { isPolling=false; }
 }
 
 function renderQueue(queue) {
-  const list   = document.getElementById('queue-list');
-  const empty  = document.getElementById('queue-empty');
-  const badge  = document.getElementById('queue-count-badge');
-
-  // Collect current IDs in DOM
-  const existingIds = new Set([...list.querySelectorAll('[data-rid]')].map(el=>el.dataset.rid));
-
-  // Remove cards no longer in queue
+  const list=document.getElementById('queue-list');
+  const empty=document.getElementById('queue-empty');
+  const badge=document.getElementById('queue-count-badge');
+  const existingIds=new Set([...list.querySelectorAll('[data-rid]')].map(el=>el.dataset.rid));
   existingIds.forEach(rid => {
-    if (!queue.find(q=>q.requestId===rid)) {
-      const el = document.getElementById('qcard-'+rid);
-      if (el) { el.style.opacity='0'; el.style.transform='scale(.95)'; el.style.transition='all .25s'; setTimeout(()=>el.remove(),250); }
+    if(!queue.find(q=>q.requestId===rid)) {
+      const el=document.getElementById('qcard-'+rid);
+      if(el){el.style.opacity='0';el.style.transform='scale(.95)';el.style.transition='all .25s';setTimeout(()=>el.remove(),250);}
     }
   });
-
-  let newCount = 0;
-  // Add new cards
+  let newCount=0;
   queue.forEach(item => {
-    if (!existingIds.has(item.requestId)) {
-      newCount++;
-      const card = buildQueueCard(item);
-      // Insert before empty state placeholder
-      list.insertBefore(card, empty);
-      knownQueue.add(item.requestId);
-    }
+    if(!existingIds.has(item.requestId)) { newCount++; list.insertBefore(buildQueueCard(item),empty); knownQueue.add(item.requestId); }
   });
-
-  // Beep & badge
-  if (newCount > 0) playBeep();
-  badge.textContent = queue.length;
-  badge.classList.toggle('hidden', queue.length === 0);
-
-  // Empty state
-  const hasCards = list.querySelectorAll('[data-rid]').length > 0;
-  empty.style.display = hasCards ? 'none' : '';
+  if(newCount>0) playBeep();
+  badge.textContent=queue.length;
+  badge.classList.toggle('hidden',queue.length===0);
+  empty.style.display=list.querySelectorAll('[data-rid]').length>0?'none':'';
 }
 
 function buildQueueCard(item) {
-  const div = document.createElement('div');
-  div.className = 'queue-card p-4 flex items-center justify-between gap-3';
-  div.id = 'qcard-' + item.requestId;
-  div.dataset.rid = item.requestId;
-
-  const ts = item.timestamp ? new Date(item.timestamp) : null;
-  const timeStr = ts ? ts.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
-
-  div.innerHTML = `
+  const div=document.createElement('div');
+  const isRedeem = item.type === 'redeem';
+  div.className='queue-card p-4 flex items-center justify-between gap-3';
+  if (isRedeem) div.style.borderLeftColor = '#a855f7';
+  div.id='qcard-'+item.requestId; div.dataset.rid=item.requestId;
+  const ts=item.timestamp?new Date(item.timestamp):null;
+  const timeStr=ts?ts.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+  const dotColor = isRedeem ? '#a855f7' : 'var(--green)';
+  const label    = isRedeem ? '🎁 ขอแลกรางวัล' : '⭐ ขอแสตมป์';
+  const btnHtml  = isRedeem
+    ? `<button class="approve-btn" style="background:#a855f7" onclick="doApproveRedeem('${item.requestId}',this)">🎁 อนุมัติแลก</button>`
+    : `<button class="approve-btn" onclick="doApprove('${item.requestId}',this)">✅ อนุมัติ</button>`;
+  div.innerHTML=`
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-0.5">
-        <span class="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0 new-badge"></span>
-        <span class="font-bold text-stone-800 text-lg" style="font-family:'IBM Plex Mono',monospace">${fmtPhone(item.phone)}</span>
+        <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 new-badge" style="background:${dotColor}"></span>
+        <span class="font-bold text-lg" style="font-family:'IBM Plex Mono',monospace;color:var(--ink)">${fmtPhone(item.phone)}</span>
       </div>
-      <p class="text-stone-400 text-xs">${timeStr}</p>
+      <p class="text-xs" style="color:var(--muted)">${label} · ${timeStr}</p>
     </div>
-    <button class="approve-btn" onclick="doApprove('${item.requestId}', this)">
-      ✅ อนุมัติ
-    </button>`;
+    ${btnHtml}`;
   return div;
 }
 
-async function doApprove(requestId, btn) {
-  const card = document.getElementById('qcard-' + requestId);
-  if (card) card.classList.add('approving');
-  btn.textContent = '⏳';
 
+function removeCard(card) {
+  if(!card) return;
+  card.style.transition='all .3s';
+  card.style.opacity='0';
+  card.style.transform='translateX(30px)';
+  setTimeout(()=>{
+    card.remove();
+    const remaining=document.querySelectorAll('#queue-list [data-rid]').length;
+    document.getElementById('queue-empty').style.display=remaining?'none':'';
+    const badge=document.getElementById('queue-count-badge');
+    badge.textContent=remaining;
+    badge.classList.toggle('hidden',remaining===0);
+  },300);
+}
+// ★ อนุมัติแลกรางวัล
+async function doApproveRedeem(requestId, btn) {
+  const card = document.getElementById('qcard-'+requestId);
+  if(card) card.classList.add('approving');
+  btn.textContent='⏳';
   try {
-    const r = await apiPost({ action:'approve_point', shopId, password, requestId });
-    if (!r.success) throw new Error(r.error);
-
-    showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)} — ${r.newPoints} แต้ม`, '#16a34a');
-
-    // Remove card with animation
-    if (card) {
-      card.style.transition = 'all .3s';
-      card.style.opacity = '0';
-      card.style.transform = 'translateX(30px)';
-      setTimeout(()=>{
-        card.remove();
-        const hasCards = document.querySelectorAll('#queue-list [data-rid]').length > 0;
-        document.getElementById('queue-empty').style.display = hasCards ? 'none' : '';
-        const badge = document.getElementById('queue-count-badge');
-        const remaining = document.querySelectorAll('#queue-list [data-rid]').length;
-        badge.textContent = remaining;
-        badge.classList.toggle('hidden', remaining === 0);
-      }, 300);
-    }
+    const r = await apiPost({action:'approve_redeem', shopId, password, requestId});
+    if(!r.success) throw new Error(r.error);
+    showToast(`🎁 อนุมัติแลกรางวัลแล้ว! ${fmtPhone(r.phone)} — แต้ม reset เป็น 0`, '#a855f7');
+    removeCard(card);
   } catch(e) {
-    showToast('❌ อนุมัติไม่สำเร็จ: ' + e.message, '#dc2626');
-    if (card) card.classList.remove('approving');
-    btn.textContent = '✅ อนุมัติ';
+    showToast('❌ '+e.message,'#dc2626');
+    if(card) card.classList.remove('approving');
+    btn.textContent='🎁 อนุมัติ';
   }
 }
 
-// ─────────────────────────────────────
-//  AUDIO BEEP (Web Audio API)
-// ─────────────────────────────────────
-function playBeep() {
+async function doApprove(requestId, btn) {
+  const card=document.getElementById('qcard-'+requestId);
+  if(card) card.classList.add('approving'); btn.textContent='⏳';
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + .15);
-    gain.gain.setValueAtTime(.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + .3);
-
-    // Second ping
-    const osc2 = ctx.createOscillator();
-    const g2   = ctx.createGain();
-    osc2.connect(g2); g2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1100, ctx.currentTime + .2);
-    g2.gain.setValueAtTime(.3, ctx.currentTime + .2);
-    g2.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .45);
-    osc2.start(ctx.currentTime + .2);
-    osc2.stop(ctx.currentTime + .45);
-    setTimeout(()=>ctx.close(), 1000);
-  } catch(_) {}
+    const r=await apiPost({action:'approve_point',shopId,password,requestId});
+    if(!r.success) throw new Error(r.error);
+    showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)} — ${r.newPoints} แต้ม`,'#16a34a');
+    if(card){
+      card.style.transition='all .3s'; card.style.opacity='0'; card.style.transform='translateX(30px)';
+      setTimeout(()=>{
+        card.remove();
+        const has=document.querySelectorAll('#queue-list [data-rid]').length>0;
+        document.getElementById('queue-empty').style.display=has?'none':'';
+        const rem=document.querySelectorAll('#queue-list [data-rid]').length;
+        const badge=document.getElementById('queue-count-badge');
+        badge.textContent=rem; badge.classList.toggle('hidden',rem===0);
+      },300);
+    }
+  } catch(e) { showToast('❌ อนุมัติไม่สำเร็จ: '+e.message,'#dc2626'); if(card) card.classList.remove('approving'); btn.textContent='✅ อนุมัติ'; }
 }
 
-// ─────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────
-// ─────────────────────────────────────
-//  JSONP API HELPER  (แก้ปัญหา CORS กับ GAS)
-//  GAS ไม่รองรับ POST จาก browser โดยตรง ใช้ GET+JSONP แทน
-// ─────────────────────────────────────
+// ── AUDIO BEEP ──
+function playBeep() {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine'; osc.frequency.setValueAtTime(880,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660,ctx.currentTime+.15);
+    gain.gain.setValueAtTime(.4,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.3);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+.3);
+    const o2=ctx.createOscillator(),g2=ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination); o2.type='sine';
+    o2.frequency.setValueAtTime(1100,ctx.currentTime+.2);
+    g2.gain.setValueAtTime(.3,ctx.currentTime+.2); g2.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.45);
+    o2.start(ctx.currentTime+.2); o2.stop(ctx.currentTime+.45);
+    setTimeout(()=>ctx.close(),1000);
+  } catch(_){}
+}
+
+// ── HELPERS ──
+function fmtPhone(p) { const s=String(p).replace(/\D/g,'').padEnd(10,' '); return s.replace(/(\S{3})(\S{3})(\S{4})/,'$1-$2-$3'); }
+function showToast(msg,bg='#333') {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.style.background=bg; t.style.color='#fff'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},3200);
+}
+
+// ── API (JSONP) ──
+
+const SLUG_KEY_JS = 31337;
+const B62_JS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function decodeSlug(slug) {
+  let n=0;
+  for(let i=0;i<slug.length;i++) n=n*62+B62_JS.indexOf(slug[i]);
+  n=n^SLUG_KEY_JS; let s='';
+  while(n>0){s=String.fromCharCode(n%128)+s;n=Math.floor(n/128);}
+  return s;
+}
+
 function apiPost(body) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Math.random().toString(36).slice(2);
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      script.remove();
-      reject(new Error('Request timeout — ตรวจสอบ GAS URL และ Deploy setting'));
-    }, 15000);
-
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      resolve(data);
-    };
-
-    const encoded = encodeURIComponent(JSON.stringify(body));
-    const script  = document.createElement('script');
-    script.src    = GAS_URL + '?callback=' + cbName + '&data=' + encoded;
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      reject(new Error('Network error — ไม่สามารถเชื่อมต่อ GAS ได้'));
-    };
+  return new Promise((resolve,reject) => {
+    const cbName='gcb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();reject(new Error('Timeout'));},15000);
+    function cleanup(){clearTimeout(timer);delete window[cbName];script.parentNode?.removeChild(script);}
+    window[cbName]=(data)=>{cleanup();resolve(data);};
+    script.onerror=()=>{cleanup();reject(new Error('Network error'));};
+    const encoded=encodeURIComponent(JSON.stringify(body));
+    script.src=GAS_URL+'?callback='+cbName+'&data='+encoded;
     document.head.appendChild(script);
   });
 }
 
-function showPage(id) {
-  ['page-error','page-login','page-plan-s','page-plan-ml'].forEach(p => {
-    document.getElementById(p).classList.toggle('hidden', p !== id);
-  });
-}
-
-function fmtPhone(p) {
-  const s = String(p).replace(/\D/g,'').padEnd(10,' ');
-  return s.replace(/(\S{3})(\S{3})(\S{4})/, '$1-$2-$3');
-}
-
-function showToast(msg, bg='#333') {
-  document.querySelectorAll('.toast').forEach(t=>t.remove());
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.style.background = bg;
-  t.style.color = '#fff';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(),300); }, 3200);
-}
-
-// ─────────────────────────────────────
-//  START
-// ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
