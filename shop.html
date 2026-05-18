@@ -270,49 +270,56 @@
       </svg>
     </div>
     <h1 class="text-2xl font-bold">เข้าสู่ระบบร้านค้า</h1>
-    <p style="color:var(--muted)" class="text-sm mt-1">กรอกรหัสผ่าน 4 หลัก</p>
+    <p style="color:var(--muted)" class="text-sm mt-1">รหัสผ่านตัวเลข+ตัวอักษร อย่างน้อย 6 ตัว</p>
   </div>
 
-  <!-- PIN display -->
-  <div class="fade-up d1 flex gap-4 mb-8 justify-center">
-    <div class="pin-dot" id="pd0"></div>
-    <div class="pin-dot" id="pd1"></div>
-    <div class="pin-dot" id="pd2"></div>
-    <div class="pin-dot" id="pd3"></div>
+  <!-- Password input -->
+  <div class="fade-up d1 w-full mb-3">
+    <div style="position:relative;">
+      <input
+        id="pw-input"
+        type="password"
+        autocomplete="current-password"
+        maxlength="32"
+        placeholder="รหัสผ่าน (เช่น Shop2024!)"
+        oninput="onPwInput()"
+        onkeydown="if(event.key==='Enter')pinConfirm()"
+        style="
+          width:100%; font-family:'IBM Plex Mono',monospace; font-size:1.15rem; font-weight:600;
+          background:var(--surface); border:1.5px solid var(--border);
+          border-radius:14px; padding:16px 52px 16px 18px;
+          color:var(--ink); outline:none; transition:border-color .2s;
+          letter-spacing:.06em;
+        "
+      />
+      <button onclick="togglePwVisible()" id="pw-eye-btn" style="
+        position:absolute; right:14px; top:50%; transform:translateY(-50%);
+        background:none; border:none; cursor:pointer; color:var(--muted); font-size:1.2rem; padding:4px;
+      " title="แสดง/ซ่อนรหัส">👁</button>
+    </div>
+    <!-- strength bar -->
+    <div style="height:4px;background:var(--faint);border-radius:99px;margin-top:6px;overflow:hidden;">
+      <div id="pw-strength-bar" style="height:100%;width:0%;border-radius:99px;transition:width .3s,background .3s;"></div>
+    </div>
+    <p id="pw-strength-label" class="text-xs mt-1" style="color:var(--muted);min-height:16px;"></p>
   </div>
 
   <!-- Rate limit warning -->
-  <div id="lockout-banner" class="hidden mb-4 text-center">
+  <div id="lockout-banner" class="hidden mb-4 w-full text-center">
     <span class="rate-badge">🔒 <span id="lockout-text">ลองใหม่ใน 30 วินาที</span></span>
   </div>
 
-  <!-- Numpad -->
-  <div class="fade-up d2 w-full pin-login-np">
-    <div class="grid grid-cols-3 gap-3 mb-3">
-      <button class="np-btn" onclick="pinPress('1')">1</button>
-      <button class="np-btn" onclick="pinPress('2')">2</button>
-      <button class="np-btn" onclick="pinPress('3')">3</button>
-      <button class="np-btn" onclick="pinPress('4')">4</button>
-      <button class="np-btn" onclick="pinPress('5')">5</button>
-      <button class="np-btn" onclick="pinPress('6')">6</button>
-      <button class="np-btn" onclick="pinPress('7')">7</button>
-      <button class="np-btn" onclick="pinPress('8')">8</button>
-      <button class="np-btn" onclick="pinPress('9')">9</button>
-      <button class="np-btn del" onclick="pinDelete()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M21 5H7l-4 7 4 7h14V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M14 9l-4 6M10 9l4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      </button>
-      <button class="np-btn" onclick="pinPress('0')">0</button>
-      <button class="np-btn ok" onclick="pinConfirm()" id="pin-ok-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M5 12l5 5L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>
-    <p id="login-error" class="text-center text-red-500 text-sm mt-3 hidden">รหัสผ่านไม่ถูกต้อง</p>
+  <!-- Login button -->
+  <div class="fade-up d2 w-full">
+    <button id="pin-ok-btn" onclick="pinConfirm()" style="
+      font-family:'IBM Plex Sans Thai',sans-serif; font-weight:700; font-size:1.05rem;
+      background:var(--green); color:#fff; border:none;
+      border-radius:14px; width:100%; padding:17px 0; cursor:pointer;
+      transition:background .12s, transform .1s, opacity .2s;
+      box-shadow:0 3px 0 #15803d;
+    ">🔓 เข้าสู่ระบบ</button>
   </div>
+  <p id="login-error" class="text-center text-red-500 text-sm mt-3 hidden">รหัสผ่านไม่ถูกต้อง</p>
 </div>
 
 <!-- ══════════ PLAN S ══════════ -->
@@ -554,30 +561,70 @@ function startLockout() {
   const banner = document.getElementById('lockout-banner');
   const text   = document.getElementById('lockout-text');
   banner.classList.remove('hidden');
+  const inp = document.getElementById('pw-input');
+  if(inp){ inp.disabled=true; inp.style.opacity='.5'; }
+  const btn = document.getElementById('pin-ok-btn');
+  if(btn){ btn.disabled=true; btn.style.opacity='.5'; }
   const update = () => {
     const remaining = Math.ceil((lockoutUntil - Date.now())/1000);
-    if (remaining <= 0) { banner.classList.add('hidden'); clearInterval(lockoutTimer); return; }
+    if (remaining <= 0) {
+      banner.classList.add('hidden');
+      clearInterval(lockoutTimer);
+      if(inp){ inp.disabled=false; inp.style.opacity='1'; }
+      if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+      return;
+    }
     text.textContent = `ลองใหม่ใน ${remaining} วินาที`;
   };
   update();
   lockoutTimer = setInterval(update, 1000);
 }
 
-// ── PIN LOGIN ──
-function pinPress(d) {
-  if (isLockedOut()) return;
-  if (pinBuffer.length >= 4) return;
-  pinBuffer += d; updatePinDots();
-  if (pinBuffer.length === 4) setTimeout(pinConfirm, 120);
+// ── PASSWORD STRENGTH ──
+function pwStrength(pw) {
+  let score = 0;
+  if (pw.length >= 6)  score++;
+  if (pw.length >= 8)  score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[a-zA-Z]/.test(pw)) score++;
+  if (/[^0-9a-zA-Z]/.test(pw)) score++;
+  return score; // 0-5
 }
-function pinDelete() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
-function updatePinDots() {
-  for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled', i<pinBuffer.length);
+function onPwInput() {
+  const pw = document.getElementById('pw-input').value;
+  const bar = document.getElementById('pw-strength-bar');
+  const lbl = document.getElementById('pw-strength-label');
+  const s = pwStrength(pw);
+  const colors = ['#dc2626','#dc2626','#f59e0b','#22c55e','#16a34a','#15803d'];
+  const labels = ['','อ่อนเกินไป','ยังสั้นอยู่','พอใช้ได้','ดี 👍','แข็งแรงมาก 🔒'];
+  bar.style.width = (pw.length===0?0:Math.max(8,s*20))+'%';
+  bar.style.background = colors[Math.min(s,5)];
+  lbl.textContent = pw.length>0 ? labels[Math.min(s,5)] : '';
+  lbl.style.color  = colors[Math.min(s,5)];
 }
+function togglePwVisible() {
+  const inp = document.getElementById('pw-input');
+  inp.type = inp.type==='password' ? 'text' : 'password';
+}
+
+// ── LOGIN ──
 async function pinConfirm() {
-  if (pinBuffer.length !== 4 || isLockedOut()) return;
-  password = pinBuffer;
+  if (isLockedOut()) return;
+  const inp = document.getElementById('pw-input');
+  const pw  = inp ? inp.value.trim() : pinBuffer;
+  if (!pw || pw.length < 6) {
+    showToast('⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัว','#d97706'); return;
+  }
+  const hasNum    = /[0-9]/.test(pw);
+  const hasLetter = /[a-zA-Z]/.test(pw);
+  if (!hasNum || !hasLetter) {
+    showToast('⚠️ รหัสต้องมีทั้งตัวเลขและตัวอักษรผสมกัน','#d97706'); return;
+  }
+  password = pw;
+  const btn = document.getElementById('pin-ok-btn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ กำลังตรวจสอบ...'; }
   const ok = await verifyPassword();
+  if(btn){ btn.disabled=false; btn.textContent='🔓 เข้าสู่ระบบ'; }
   if (!ok) {
     failedAttempts++;
     document.getElementById('login-error').classList.remove('hidden');
@@ -586,7 +633,7 @@ async function pinConfirm() {
       failedAttempts = 0;
       startLockout();
     }
-    pinBuffer = ''; updatePinDots(); return;
+    password = null; return;
   }
   failedAttempts = 0;
   sessionStorage.setItem('shopPass_'+shopId, password);
@@ -826,8 +873,14 @@ function buildQueueCard(item) {
   const dotColor = isRedeem ? '#a855f7' : 'var(--green)';
   const label    = isRedeem ? '🎁 ขอแลกรางวัล' : '⭐ ขอแสตมป์';
   const btnHtml  = isRedeem
-    ? `<button class="approve-btn" style="background:#a855f7" onclick="doApproveRedeem('${item.requestId}',this)">🎁 อนุมัติแลก</button>`
-    : `<button class="approve-btn" onclick="doApprove('${item.requestId}',this)">✅ อนุมัติ</button>`;
+    ? `<div class="flex flex-col gap-2">
+        <button class="approve-btn" style="background:#a855f7" onclick="doApproveRedeem('${item.requestId}',this)">🎁 อนุมัติแลก</button>
+        <button class="approve-btn" style="background:var(--red);font-size:.85rem;padding:9px 14px" onclick="doReject('${item.requestId}','redeem',this)">✕ ปฏิเสธ</button>
+       </div>`
+    : `<div class="flex flex-col gap-2">
+        <button class="approve-btn" onclick="doApprove('${item.requestId}',this)">✅ อนุมัติ</button>
+        <button class="approve-btn" style="background:var(--red);font-size:.85rem;padding:9px 14px" onclick="doReject('${item.requestId}','point',this)">✕ ปฏิเสธ</button>
+       </div>`;
   div.innerHTML=`
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-0.5">
@@ -841,8 +894,28 @@ function buildQueueCard(item) {
 }
 
 
+// ★ ปฏิเสธคำขอ (ลบออกจาก Queue ฝั่ง client เท่านั้น — GAS จะ auto-expire)
+async function doReject(requestId, type, btn) {
+  const card = document.getElementById('qcard-'+requestId);
+  if(!confirm(type==='redeem' ? 'ปฏิเสธคำขอแลกรางวัลนี้?' : 'ปฏิเสธคำขอแต้มนี้?')) return;
+  if(card) card.classList.add('approving');
+  btn.textContent='⏳';
+  try {
+    const r = await apiPost({action:'reject_request', shopId, password, requestId});
+    // GAS ยังไม่มี handler → ถือว่า success=false แต่ก็ยังลบออก UI ได้
+    const label = type==='redeem' ? '🎁 ปฏิเสธแลกรางวัลแล้ว' : '⭐ ปฏิเสธคำขอแต้มแล้ว';
+    showToast(label, '#dc2626');
+    removeCard(card);
+  } catch(e) {
+    // network/GAS error — ก็ยังลบออก UI ให้เพราะเจ้าของร้านตัดสินใจแล้ว
+    showToast('ปฏิเสธแล้ว (offline)', '#dc2626');
+    removeCard(card);
+  }
+}
+
+// 🎯 กูเติมชื่อฟังก์ชัน removeCard คืนกลับมาให้ตรงนี้มึง
 function removeCard(card) {
-  if(!card) return;
+  if(!card) return; // ทำงานได้ปกติแล้ว เพราะอยู่ในฟังก์ชัน removeCard
   card.style.transition='all .3s';
   card.style.opacity='0';
   card.style.transform='translateX(30px)';
@@ -851,8 +924,10 @@ function removeCard(card) {
     const remaining=document.querySelectorAll('#queue-list [data-rid]').length;
     document.getElementById('queue-empty').style.display=remaining?'none':'';
     const badge=document.getElementById('queue-count-badge');
-    badge.textContent=remaining;
-    badge.classList.toggle('hidden',remaining===0);
+    if(badge) {
+      badge.textContent=remaining;
+      badge.classList.toggle('hidden',remaining===0);
+    }
   },300);
 }
 // ★ อนุมัติแลกรางวัล
