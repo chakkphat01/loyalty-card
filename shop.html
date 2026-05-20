@@ -525,6 +525,25 @@ let pollTimer=null, knownQueue=new Set(), isPolling=false;
 let customersCache=[]; // raw list
 let currentTab_s='add', currentTab_ml='main';
 let custLoaded=false;
+let suspendedMode = false;
+ 
+// ── SUSPENSION BANNER (BOTTOM VERSION) ──
+function showSuspendedBanner() {
+  if (document.getElementById('suspended-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'suspended-banner';
+  // เปลี่ยนจาก top:0 เป็น bottom:0 เพื่อให้แสดงด้านล่างสุด
+  b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;text-align:center;padding:14px 16px;font-weight:700;font-size:.9rem;letter-spacing:.01em;box-shadow: 0 -4px 10px rgba(0,0,0,0.15);';
+  b.innerHTML = '🔒 บัญชีถูกระงับ — ไม่สามารถรับหรืออนุมัติแต้มได้จนกว่าจะต่ออายุแพ็กเกจ';
+  
+  // เปลี่ยนจาก prepend เป็น append เพื่อให้ต่อท้ายด้านล่างสุดของ body
+  document.body.appendChild(b); 
+}
+
+function hideSuspendedBanner() {
+  const b = document.getElementById('suspended-banner');
+  if (b) b.remove();
+}
 
 // ── THEME ──
 function getTheme() { return localStorage.getItem('shopTheme') || 'light'; }
@@ -652,6 +671,11 @@ async function proceedAfterLogin() {
     if (data.success && data.shop) {
       planType = (data.shop.planType||'S').toUpperCase();
       shopName = data.shop.name || shopName;
+      // ----- เพิ่มตรงนี้ -----
+      if (data.shop.status === 'suspended') {
+          suspendedMode = true;
+          showSuspendedBanner();
+      }
     }
   } catch { planType='S'; }
 
@@ -798,6 +822,7 @@ function updateSDisplay() {
   el.classList.remove('placeholder'); el.textContent=fmtPhone(sBuf);
 }
 async function doManualAdd() {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   if(sBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
   const btn=document.getElementById('s-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
@@ -820,6 +845,7 @@ function updateMLDisplay() {
   el.classList.remove('placeholder'); el.textContent=fmtPhone(mlBuf);
 }
 async function doMLManualAdd() {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   if(mlBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
   const btn=document.getElementById('ml-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
@@ -837,7 +863,19 @@ function startPolling() { fetchQueue(); pollTimer=setInterval(fetchQueue,POLL_IN
 function stopPolling()  { if(pollTimer){clearInterval(pollTimer);pollTimer=null;} }
 async function fetchQueue() {
   if(isPolling) return; isPolling=true;
-  try { const r=await apiPost({action:'get_queue',shopId,password}); if(r.success) renderQueue(r.queue||[]); }
+  try { 
+    const r=await apiPost({action:'get_queue',shopId,password}); 
+    if(r.success) {
+      // ----- เพิ่มตรงนี้ -----
+      if (r.shopStatus === 'suspended') {
+        suspendedMode = true; showSuspendedBanner();
+      } else {
+        suspendedMode = false; hideSuspendedBanner();
+      }
+      // -----------------------
+      renderQueue(r.queue||[]); 
+    }
+  }
   catch(_) {} finally { isPolling=false; }
 }
 
@@ -896,6 +934,7 @@ function buildQueueCard(item) {
 
 // ★ ปฏิเสธคำขอ (ลบออกจาก Queue ฝั่ง client เท่านั้น — GAS จะ auto-expire)
 async function doReject(requestId, type, btn) {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   const card = document.getElementById('qcard-'+requestId);
   if(!confirm(type==='redeem' ? 'ปฏิเสธคำขอแลกรางวัลนี้?' : 'ปฏิเสธคำขอแต้มนี้?')) return;
   if(card) card.classList.add('approving');
@@ -932,6 +971,7 @@ function removeCard(card) {
 }
 // ★ อนุมัติแลกรางวัล
 async function doApproveRedeem(requestId, btn) {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   const card = document.getElementById('qcard-'+requestId);
   if(card) card.classList.add('approving');
   btn.textContent='⏳';
@@ -948,6 +988,7 @@ async function doApproveRedeem(requestId, btn) {
 }
 
 async function doApprove(requestId, btn) {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   const card=document.getElementById('qcard-'+requestId);
   if(card) card.classList.add('approving'); btn.textContent='⏳';
   try {
