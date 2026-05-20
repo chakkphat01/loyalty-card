@@ -540,6 +540,17 @@ function renderCard(data) {
   document.getElementById('points-count').textContent = currentPoints;
   document.getElementById('max-points-display').textContent = `/ ${maxPoints}`;
   renderStampGrid(currentPoints, maxPoints);
+
+  if (shop.status === 'suspended') {
+    document.getElementById('action-area').innerHTML = `
+      <div style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.25);border-radius:16px;padding:16px 18px;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:6px">🔒</div>
+        <p style="color:#ef4444;font-weight:700;font-size:.95rem;margin-bottom:4px">บริการถูกระงับชั่วคราว</p>
+        <p style="color:rgba(239,68,68,.7);font-size:.8rem;line-height:1.5">ร้านค้านี้ยังไม่ได้ต่ออายุแพ็กเกจ<br/>กรุณาติดต่อร้านค้าโดยตรง</p>
+      </div>`;
+    return;
+  }
+  
   renderActionArea(shop.canRequestPoints, shop.planType, currentPoints, maxPoints);
 }
 
