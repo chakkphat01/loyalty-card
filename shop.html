@@ -331,6 +331,7 @@
       <h2 class="text-lg font-bold mt-0.5" id="s-shop-name">—</h2>
     </div>
     <div class="flex items-center gap-2">
+      <button id="s-lang-btn" onclick="toggleLang()" class="theme-btn" style="font-family:'IBM Plex Sans Thai',sans-serif;font-size:.75rem;font-weight:700;min-width:40px">TH</button>
       <button class="theme-btn" onclick="toggleTheme()" id="s-theme-btn">🌙</button>
       <span class="text-xs rounded-full px-3 py-1 font-medium" style="background:var(--faint);border:1px solid var(--border);color:var(--muted)">PLAN S</span>
       <button onclick="doLogout()" class="theme-btn" title="ออกจากระบบ">
@@ -341,9 +342,10 @@
 
   <!-- Tabs (Plan S) -->
   <div class="fade-up d1 tab-bar mb-5">
-    <button class="tab-btn active" id="s-tab-add"     onclick="sSwitch('add')">➕ เพิ่มแต้ม</button>
-    <button class="tab-btn"       id="s-tab-history"  onclick="sSwitch('history')">👥 ลูกค้า</button>
-    <button class="tab-btn"       id="s-tab-rank"     onclick="sSwitch('rank')">🏆 อันดับ</button>
+    <button class="tab-btn active" id="s-tab-add"     onclick="sSwitch('add')"    >➕ <span data-th="เพิ่มแต้ม"  data-en="Add">เพิ่มแต้ม</span></button>
+    <button class="tab-btn"       id="s-tab-history"  onclick="sSwitch('history')">👥 <span data-th="ลูกค้า"     data-en="Customers">ลูกค้า</span></button>
+    <button class="tab-btn"       id="s-tab-rank"     onclick="sSwitch('rank')"   >🏆 <span data-th="อันดับ"     data-en="Rank">อันดับ</span></button>
+    <button class="tab-btn"       id="s-tab-contact"  onclick="sSwitch('contact')">💬 <span data-th="ติดต่อ"     data-en="Contact">ติดต่อ</span></button>
   </div>
 
   <!-- Pane: add -->
@@ -392,6 +394,12 @@
     <div id="s-rank-loading" class="text-center py-10" style="color:var(--muted)">⏳ กำลังโหลด...</div>
     <div id="s-rank-content" class="hidden"></div>
   </div>
+
+  <!-- Pane: contact (Plan S) -->
+  <div id="s-pane-contact" class="hidden fade-up">
+    <p id="s-contact-title" class="section-label mb-4" data-th="ช่องทางการติดต่อระบบ" data-en="System Contact">ช่องทางการติดต่อระบบ</p>
+    <div class="flex flex-col gap-3" id="s-contact-list"></div>
+  </div>
 </div>
 
 <!-- ══════════ PLAN M/L ══════════ -->
@@ -403,6 +411,7 @@
       <h2 class="text-lg font-bold mt-0.5" id="ml-shop-name">—</h2>
     </div>
     <div class="flex items-center gap-2">
+      <button id="ml-lang-btn" onclick="toggleLang()" class="theme-btn" style="font-family:'IBM Plex Sans Thai',sans-serif;font-size:.75rem;font-weight:700;min-width:40px">TH</button>
       <button class="theme-btn" onclick="toggleTheme()" id="ml-theme-btn">🌙</button>
       <span id="ml-plan-badge" class="text-xs rounded-full px-3 py-1 font-medium" style="background:var(--ink);color:#fff">PLAN M</span>
       <div id="poll-indicator" class="flex items-center gap-1.5 text-xs" style="color:var(--muted)">
@@ -419,9 +428,10 @@
 
   <!-- Tabs (Plan ML) -->
   <div class="fade-up d1 tab-bar mb-5">
-    <button class="tab-btn active" id="ml-tab-main"      onclick="mlSwitch('main')">🎯 คิว & เพิ่มแต้ม</button>
-    <button class="tab-btn"       id="ml-tab-customers"  onclick="mlSwitch('customers')">👥 ลูกค้า</button>
-    <button class="tab-btn"       id="ml-tab-rank"       onclick="mlSwitch('rank')">🏆 อันดับ</button>
+    <button class="tab-btn active" id="ml-tab-main"      onclick="mlSwitch('main')"     >🎯 <span data-th="คิว & เพิ่มแต้ม" data-en="Queue">คิว & เพิ่มแต้ม</span></button>
+    <button class="tab-btn"       id="ml-tab-customers"  onclick="mlSwitch('customers')">👥 <span data-th="ลูกค้า"           data-en="Customers">ลูกค้า</span></button>
+    <button class="tab-btn"       id="ml-tab-rank"       onclick="mlSwitch('rank')"     >🏆 <span data-th="อันดับ"           data-en="Rank">อันดับ</span></button>
+    <button class="tab-btn"       id="ml-tab-contact"    onclick="mlSwitch('contact')"  >💬 <span data-th="ติดต่อ"           data-en="Contact">ติดต่อ</span></button>
   </div>
 
   <!-- Pane: main -->
@@ -502,6 +512,12 @@
     <div id="ml-rank-loading" class="text-center py-10" style="color:var(--muted)">⏳ กำลังโหลด...</div>
     <div id="ml-rank-content" class="hidden"></div>
   </div>
+
+  <!-- Pane: contact (Plan ML) -->
+  <div id="ml-pane-contact" class="hidden fade-up">
+    <p class="section-label mb-4" data-th="ช่องทางการติดต่อระบบ" data-en="System Contact">ช่องทางการติดต่อระบบ</p>
+    <div class="flex flex-col gap-3" id="ml-contact-list"></div>
+  </div>
 </div>
 
 <!-- ══════════ CUSTOMER DETAIL MODAL ══════════ -->
@@ -540,8 +556,72 @@ let customersCache=[]; // raw list
 let currentTab_s='add', currentTab_ml='main';
 let custLoaded=false;
 let suspendedMode = false;
- 
-// ── SUSPENSION BANNER (BOTTOM VERSION) ──
+
+// ════════════════════════════════════════════════
+//  LANG SYSTEM
+// ════════════════════════════════════════════════
+let currentLang = localStorage.getItem('stampx_lang') || 'th';
+
+const SHOP_LABELS = {
+  th: { contactTitle:'ช่องทางการติดต่อระบบ', fbSub:'ติดตามข่าวสาร อัปเดตระบบ', lineSub:'พูดคุย แจ้งปัญหา', gmailSub:'ส่งอีเมลหาทีมงาน', logoutConfirm:'ต้องการออกจากระบบใช่ไหม?' },
+  en: { contactTitle:'System Contact',        fbSub:'News & system updates',      lineSub:'Chat & support',   gmailSub:'Email our team',       logoutConfirm:'Logout?' },
+};
+
+// ★ ข้อมูลติดต่อระบบ StampX — แก้เป็นของคุณ
+const SYSTEM_CONTACT = {
+  facebook: 'https://facebook.com/ZER0Game',
+  line:     'https://line.me/ti/p/YOUR_LINE_ID',
+  gmail:    'mailto:your@email.com',
+};
+
+function toggleLang() {
+  currentLang = currentLang === 'th' ? 'en' : 'th';
+  localStorage.setItem('stampx_lang', currentLang);
+  applyShopLang(currentLang);
+}
+function applyShopLang(lang) {
+  ['s-lang-btn','ml-lang-btn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.textContent = lang === 'th' ? 'TH' : 'EN';
+  });
+  document.querySelectorAll('[data-th]').forEach(el => {
+    el.textContent = lang === 'en' ? (el.dataset.en || el.dataset.th) : el.dataset.th;
+  });
+  document.documentElement.lang = lang;
+  // re-render contact panes (เพื่ออัปเดต subtitle)
+  ['s-contact-list','ml-contact-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; renderContactPane(id); }
+  });
+}
+
+function renderContactPane(listId) {
+  const L = SHOP_LABELS[currentLang];
+  const el = document.getElementById(listId);
+  if (!el) return;
+  el.innerHTML = `
+    <a href="${SYSTEM_CONTACT.facebook}" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--faint);border:1px solid var(--border);border-radius:16px;padding:14px 18px;text-decoration:none;color:var(--text)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(24,119,242,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </div>
+      <div style="flex:1"><p style="font-weight:700;font-size:.9rem">Facebook</p><p style="font-size:.78rem;color:var(--muted)">${L.fbSub}</p></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </a>
+    <a href="${SYSTEM_CONTACT.line}" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--faint);border:1px solid var(--border);border-radius:16px;padding:14px 18px;text-decoration:none;color:var(--text)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,195,0,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#00c300"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+      </div>
+      <div style="flex:1"><p style="font-weight:700;font-size:.9rem">LINE OA</p><p style="font-size:.78rem;color:var(--muted)">${L.lineSub}</p></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </a>
+    <a href="${SYSTEM_CONTACT.gmail}" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--faint);border:1px solid var(--border);border-radius:16px;padding:14px 18px;text-decoration:none;color:var(--text)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(234,67,53,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/></svg>
+      </div>
+      <div style="flex:1"><p style="font-weight:700;font-size:.9rem">Gmail / Email</p><p style="font-size:.78rem;color:var(--muted)">${L.gmailSub}</p></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </a>`;
+}
 function showSuspendedBanner() {
   if (document.getElementById('suspended-banner')) return;
   const b = document.createElement('div');
@@ -572,6 +652,7 @@ function toggleTheme() { applyTheme(getTheme()==='dark' ? 'light' : 'dark'); }
 // ── INIT ──
 async function init() {
   applyTheme(getTheme());
+  applyShopLang(currentLang);
   const p=new URLSearchParams(window.location.search);
   const rawShop=p.get('shop')||'';
   shopId=rawShop.match(/^[0-9a-z]{6,}$/)?decodeSlug(rawShop):rawShop;
@@ -799,23 +880,25 @@ function renderShopRank(prefix) {
 
 function sSwitch(tab) {
   currentTab_s = tab;
-  ['add','history','rank'].forEach(t => {
+  ['add','history','rank','contact'].forEach(t => {
     document.getElementById('s-tab-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('s-pane-'+t)?.classList.toggle('hidden', t!==tab);
   });
   if (tab==='history' && !custLoaded) loadCustomers('s');
-  if (tab==='rank') renderShopRank('s');
+  if (tab==='rank')    renderShopRank('s');
+  if (tab==='contact') renderContactPane('s-contact-list');
 }
 
 // ── TABS PLAN ML ──
 function mlSwitch(tab) {
   currentTab_ml = tab;
-  ['main','customers','rank'].forEach(t => {
+  ['main','customers','rank','contact'].forEach(t => {
     document.getElementById('ml-tab-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('ml-pane-'+t)?.classList.toggle('hidden', t!==tab);
   });
   if (tab==='customers' && !custLoaded) loadCustomers('ml');
-  if (tab==='rank') renderShopRank('ml');
+  if (tab==='rank')    renderShopRank('ml');
+  if (tab==='contact') renderContactPane('ml-contact-list');
 }
 
 // ── LOAD CUSTOMERS ──
