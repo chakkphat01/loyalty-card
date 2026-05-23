@@ -221,6 +221,26 @@
       transition: background .2s;
     }
     .history-row + .history-row { margin-top: 10px; }
+    /* ── STREAK & RANK & CONTACT ── */
+    @keyframes fire { 0%,100%{transform:scaleY(1) rotate(-2deg)} 50%{transform:scaleY(1.08) rotate(2deg)} }
+    .streak-fire { display: inline-block; animation: fire .6s ease-in-out infinite; transform-origin: bottom center; }
+    .lb-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); transition: background .2s; }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-row.is-me { background: rgba(245,200,66,.07); border-radius: 12px; }
+    .contact-btn { display: flex; align-items: center; gap: 12px; background: var(--faint); border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; cursor: pointer; transition: transform .15s; text-decoration: none; color: var(--text); }
+    .contact-btn:active { transform: scale(.98); }
+
+    /* ── RANK TABS ── */
+    .rank-sub-tab { flex:1; font-family:'Prompt',sans-serif; font-size:.78rem; font-weight:600;
+      padding:8px 0; border-radius:10px; border:none; cursor:pointer;
+      transition:background .2s, color .2s; color:var(--muted); background:transparent; }
+    .rank-sub-tab.active { background:var(--surface); color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.15); }
+
+    /* ── LANG TOGGLE ── */
+    .lang-btn { font-family:'Prompt',sans-serif; font-size:.75rem; font-weight:700;
+      padding:5px 10px; border-radius:10px; border:1px solid var(--border);
+      background:var(--faint); color:var(--muted); cursor:pointer; transition:all .15s; }
+    .lang-btn.active { background:var(--accent); color:#0f0f17; border-color:transparent; }
 
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; }
@@ -318,10 +338,16 @@
   <!-- Top bar -->
   <div class="fade-up flex items-center justify-between mb-5">
     <div>
-      <p class="text-xs mb-0.5" style="color:var(--muted)">สวัสดีคุณ</p>
+      <p class="text-xs mb-0.5" style="color:var(--muted)" id="lbl-greeting">สวัสดีคุณ</p>
       <p class="heading font-bold text-base" id="display-phone">—</p>
     </div>
     <div class="flex items-center gap-2">
+      <div id="streak-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full" style="background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3)">
+        <span class="streak-fire text-sm">🔥</span>
+        <span id="streak-num" class="font-bold text-sm" style="color:var(--accent)">0</span>
+      </div>
+      <button class="lang-btn active" id="lang-th" onclick="setLang('th')">TH</button>
+      <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-icon-card">🌙</button>
       <button onclick="logout()" class="theme-btn" title="เปลี่ยนเบอร์">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -333,8 +359,10 @@
 
   <!-- TAB BAR -->
   <div class="fade-up delay-1 tab-bar mb-5">
-    <button class="tab-btn active" id="tab-stamp" onclick="switchTab('stamp')">🎯 แสตมป์</button>
-    <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📋 ประวัติร้าน</button>
+    <button class="tab-btn active" id="tab-stamp"   onclick="switchTab('stamp')"   data-th="🎯 แสตมป์"     data-en="🎯 Stamp">🎯 แสตมป์</button>
+    <button class="tab-btn"       id="tab-rank"    onclick="switchTab('rank')"    data-th="🏆 อันดับ"      data-en="🏆 Rank">🏆 อันดับ</button>
+    <button class="tab-btn"       id="tab-history" onclick="switchTab('history')" data-th="📋 ประวัติ"     data-en="📋 History">📋 ประวัติ</button>
+    <button class="tab-btn"       id="tab-contact" onclick="switchTab('contact')" data-th="💬 ติดต่อ"      data-en="💬 Contact">💬 ติดต่อ</button>
   </div>
 
   <!-- ══ TAB: STAMP ══ -->
@@ -369,7 +397,82 @@
     </div>
   </div>
 
-  <!-- ══ TAB: HISTORY ══ -->
+  <!-- ══ TAB: RANK ══ -->
+  <div id="pane-rank" class="hidden">
+    <!-- Sub-tabs: ร้านนี้ / ทั้งระบบ -->
+    <div class="flex background:var(--faint) rounded-2xl p-1 gap-1 mb-4" style="background:var(--faint);border-radius:14px;padding:4px">
+      <button class="rank-sub-tab active" id="rsub-shop"   onclick="switchRankTab('shop')"   data-th="🏪 ร้านนี้"   data-en="🏪 This Shop">🏪 ร้านนี้</button>
+      <button class="rank-sub-tab"       id="rsub-global" onclick="switchRankTab('global')" data-th="🌐 ทั้งระบบ"  data-en="🌐 Global">🌐 ทั้งระบบ</button>
+    </div>
+
+    <div id="rank-loading" class="text-center py-12" style="color:var(--muted)">
+      <div class="text-3xl mb-3">⏳</div>
+      <p class="text-sm" data-th="กำลังคำนวณอันดับ..." data-en="Loading rankings...">กำลังคำนวณอันดับ...</p>
+    </div>
+
+    <div id="rank-content" class="hidden fade-up">
+      <!-- My stats cards -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center">
+          <p class="text-xs mb-1" style="color:var(--muted)" id="my-score-label" data-th="แต้มของคุณ" data-en="Your Points">แต้มของคุณ</p>
+          <p id="my-score" class="font-mono text-2xl font-bold" style="color:var(--accent)">—</p>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center">
+          <p class="text-xs mb-1" style="color:var(--muted)" id="top-score-label" data-th="สูงสุดในร้าน" data-en="Top in Shop">สูงสุดในร้าน</p>
+          <p id="top-score" class="font-mono text-2xl font-bold" style="color:#22c55e">—</p>
+        </div>
+      </div>
+
+      <!-- Streak highlight -->
+      <div id="streak-row" class="hidden mb-4 rounded-2xl px-4 py-3 flex items-center gap-3" style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2)">
+        <span class="streak-fire text-2xl">🔥</span>
+        <div>
+          <p class="font-bold text-sm" style="color:var(--accent)" id="streak-label-text">มาต่อเนื่อง 0 วัน</p>
+          <p class="text-xs" style="color:var(--muted)" id="streak-sub-text" data-th="ไฟสตรีคของคุณ" data-en="Your visit streak">ไฟสตรีคของคุณ</p>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div id="lb-list" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:8px"></div>
+    </div>
+  </div>
+
+  <div id="pane-contact" class="hidden fade-up">
+    <p class="text-xs font-bold tracking-widest uppercase mb-4" style="color:var(--muted)"
+       data-th="ช่องทางการติดต่อ" data-en="Contact Us">ช่องทางการติดต่อ</p>
+    <div class="flex flex-col gap-3">
+      <a id="contact-fb" href="#" target="_blank" class="contact-btn">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(24,119,242,.15)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-sm">Facebook</p>
+          <p class="text-xs" style="color:var(--muted)" data-th="ติดตามข่าวสาร โปรโมชั่น" data-en="Follow for news & promotions">ติดตามข่าวสาร โปรโมชั่น</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </a>
+      <a id="contact-line" href="#" target="_blank" class="contact-btn">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(0,195,0,.15)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#00c300"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-sm">LINE OA</p>
+          <p class="text-xs" style="color:var(--muted)" data-th="พูดคุย สอบถามปัญหา" data-en="Chat & support">พูดคุย สอบถามปัญหา</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </a>
+      <a id="contact-gmail" href="#" target="_blank" class="contact-btn">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(234,67,53,.12)">
+          <svg width="22" height="22" viewBox="0 0 24 24"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-sm">Gmail / Email</p>
+          <p class="text-xs" style="color:var(--muted)" data-th="ส่งอีเมลหาเรา" data-en="Send us an email">ส่งอีเมลหาเรา</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--muted)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </a>
+    </div>
+  </div>
   <div id="pane-history" class="hidden">
     <div id="history-loading" class="text-center py-12" style="color:var(--muted)">
       <div class="text-3xl mb-3">⏳</div>
@@ -411,8 +514,17 @@ let lastRequestTime = 0;
 
 // ── STATE ──
 let shopId = null, userPhone = null, phoneBuffer = '', shopData = null, requesting = false;
-let historyLoaded = false;
+// ★ ข้อมูลติดต่อ — แก้เป็นของร้าน
+const CONTACT = {
+  facebook: 'https://facebook.com/ZER0Game',
+  line:     'https://line.me/ti/p/YOUR_LINE_ID',
+  gmail:    'mailto:your@email.com',
+};
+
+let historyLoaded = false, rankLoaded = false;
 let currentTab = 'stamp';
+let currentRankTab = 'shop'; // 'shop' | 'global'
+let currentLang = localStorage.getItem('stampx_lang') || 'th';
 
 // ── THEME ──
 function getTheme() { return localStorage.getItem('theme') || 'dark'; }
@@ -427,6 +539,11 @@ function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
 // ── INIT ──
 function init() {
   applyTheme(getTheme());
+  applyLang(currentLang);
+  // Set Contact Links
+  document.getElementById('contact-fb').href    = CONTACT.facebook;
+  document.getElementById('contact-line').href  = CONTACT.line;
+  document.getElementById('contact-gmail').href = CONTACT.gmail;
   const params = new URLSearchParams(window.location.search);
   const rawShop = params.get('shop') || '';
   // ★ รองรับทั้ง ShopID ตรงๆ (S001) และ slug ที่ encode แล้ว (0sX3kp)
@@ -451,12 +568,72 @@ function showPage(id) {
 
 // ── TAB ──
 function switchTab(tab) {
+  if(tab !== 'stamp' && shopData && shopData.status === 'suspended') {
+    showToast('🔒 ระบบถูกระงับชั่วคราว', '#ff6b6b'); return;
+  }
   currentTab = tab;
-  document.getElementById('tab-stamp').classList.toggle('active', tab === 'stamp');
-  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
-  document.getElementById('pane-stamp').classList.toggle('hidden', tab !== 'stamp');
-  document.getElementById('pane-history').classList.toggle('hidden', tab !== 'history');
+  ['stamp', 'history', 'rank', 'contact'].forEach(id => {
+    const btn = document.getElementById('tab-' + id);
+    const pane = document.getElementById('pane-' + id);
+    if(btn) btn.classList.toggle('active', tab === id);
+    if(pane) pane.classList.toggle('hidden', tab !== id);
+  });
   if (tab === 'history' && !historyLoaded) loadHistory();
+  if (tab === 'rank'    && !rankLoaded)    loadRank();
+}
+
+// ── RANK SUB-TAB ──
+function switchRankTab(sub) {
+  currentRankTab = sub;
+  ['shop','global'].forEach(s => {
+    document.getElementById('rsub-'+s)?.classList.toggle('active', s === sub);
+  });
+  // update label + scores บน card
+  const lbl = document.getElementById('top-score-label');
+  const myLbl = document.getElementById('my-score-label');
+  if (sub === 'shop') {
+    if (lbl) lbl.textContent = currentLang === 'th' ? 'สูงสุดในร้าน' : 'Top in Shop';
+    if (myLbl) myLbl.textContent = currentLang === 'th' ? 'แต้มของคุณ (ร้านนี้)' : 'Your Points (Shop)';
+    document.getElementById('my-score').textContent  = rankDataShop?.myPts  ?? '—';
+    document.getElementById('top-score').textContent = rankDataShop?.topPts ?? '—';
+  } else {
+    if (lbl) lbl.textContent = currentLang === 'th' ? 'สูงสุดทั้งระบบ' : 'Global Top';
+    if (myLbl) myLbl.textContent = currentLang === 'th' ? 'แต้มของคุณ (รวม)' : 'Your Points (All)';
+    document.getElementById('my-score').textContent  = rankDataGlobal?.myPts  ?? '—';
+    document.getElementById('top-score').textContent = rankDataGlobal?.topPts ?? '—';
+  }
+  if (rankLoaded) renderLeaderboard();
+}
+
+// ── LANG ──
+const LABELS = {
+  th: { greeting:'สวัสดีคุณ', streakDay:'มาต่อเนื่อง {n} วัน', streakSub:'ไฟสตรีคของคุณ' },
+  en: { greeting:'Hello',      streakDay:'{n}-Day Streak',         streakSub:'Your visit streak' },
+};
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('stampx_lang', lang);
+  applyLang(lang);
+}
+function applyLang(lang) {
+  document.querySelectorAll('[data-th]').forEach(el => {
+    el.textContent = lang === 'en' ? (el.dataset.en || el.dataset.th) : el.dataset.th;
+  });
+  document.getElementById('lang-th')?.classList.toggle('active', lang === 'th');
+  document.getElementById('lang-en')?.classList.toggle('active', lang === 'en');
+  const greet = document.getElementById('lbl-greeting');
+  if (greet) greet.textContent = LABELS[lang]?.greeting || 'สวัสดีคุณ';
+  // update streak label if visible
+  const sn = document.getElementById('streak-num');
+  if (sn) updateStreakLabel(Number(sn.textContent) || 0);
+}
+function updateStreakLabel(n) {
+  const lbl = document.getElementById('streak-label-text');
+  if (!lbl) return;
+  const tmpl = LABELS[currentLang]?.streakDay || 'มาต่อเนื่อง {n} วัน';
+  lbl.textContent = tmpl.replace('{n}', n);
+  const sub = document.getElementById('streak-sub-text');
+  if (sub) sub.textContent = LABELS[currentLang]?.streakSub || 'ไฟสตรีคของคุณ';
 }
 
 // ── NUMPAD ──
@@ -484,11 +661,12 @@ async function loadCardData() {
     const data = await apiPost({ action:'check_points', shopId, phone:userPhone });
     if (!data.success) throw new Error(data.error || 'โหลดข้อมูลไม่สำเร็จ');
     renderCard(data);
+    loadStreak(); // ★ ไม่ await — รันพาราเลล ไม่บล็อก UI
   } catch(err) {
     showToast('⚠️ ' + err.message, '#ff6b6b');
   }
 }
-
+// ── RENDER CARD ──
 // ── RENDER CARD ──
 function renderCard(data) {
   const { shop, customer } = data;
@@ -510,22 +688,10 @@ function renderCard(data) {
     cardEl.style.backgroundImage = `url('${imgUrl}')`;
     cardEl.style.backgroundSize  = 'cover';
     cardEl.style.backgroundPosition = 'center';
-    // overlay เพื่อให้อ่านตัวหนังสือได้
     cardEl.style.setProperty('--card-overlay','rgba(0,0,0,0.45)');
   } else {
     cardEl.style.backgroundImage = '';
     cardEl.style.setProperty('--card-overlay','none');
-  }
-
-  const rewardEl = document.getElementById('reward-text');
-  // ★ ใช้ rewardText จาก Shops sheet (คอลัมน์ I) ถ้าไม่มีใช้ค่าเริ่มต้น
-  const rewardLabel = shop.rewardText && shop.rewardText.trim()
-    ? shop.rewardText.trim()
-    : 'แลกฟรีได้เลย';
-  if (remaining === 0) {
-    rewardEl.innerHTML = `🎉 <span style="color:var(--text);font-weight:600">ครบแล้ว! กด${rewardLabel} ↓</span>`;
-  } else {
-    rewardEl.innerHTML = `อีก <span style="color:var(--text);font-weight:600">${remaining} แต้ม</span> ${rewardLabel}!`;
   }
 
   const nameEl = document.getElementById('shop-name-display');
@@ -537,9 +703,57 @@ function renderCard(data) {
   badge.setAttribute('style', `display:inline-block;font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:50px;${planColors[shop.planType]||'background:rgba(255,255,255,.1);color:#ccc'}`);
   badge.textContent = `PLAN ${shop.planType}`;
 
+  // 🔴 ท่าไม้ตาย: ล็อกหน้าจอลูกค้าถ้าร้านถูกระงับ!
+  if (shop.status === 'suspended') {
+    // 1. ซ่อนข้อความ Reward และ Tab Bar (ปิดตายไม่ให้กดดูประวัติร้านอื่นได้)
+    document.getElementById('reward-text').style.display = 'none';
+    document.querySelector('.tab-bar').style.display = 'none';
+    
+    // 2. ล้างตารางแสตมป์ แล้วยัดรูปกุญแจล็อกลงไปแทน
+    const grid = document.getElementById('stamp-grid');
+    grid.className = "text-center py-8"; // เอา grid ออกเพื่อจัดให้อยู่ตรงกลาง
+    grid.innerHTML = `
+      <div style="font-size:4rem; margin-bottom:12px; opacity:0.9;">🔒</div>
+      <p style="color:#ef4444; font-weight:700; font-size:1.3rem;">แต้มของคุณถูกซ่อน</p>
+      <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; margin-top:6px; line-height:1.5">
+        ระบบสะสมแต้มของร้านนี้ถูกระงับชั่วคราว<br/>กรุณาติดต่อพนักงานหน้าร้าน
+      </p>
+    `;
+    
+    // 3. ซ่อนตัวนับแต้ม x/10 ใต้การ์ด
+    const pointsFooter = document.querySelector('.stamp-card .mt-5');
+    if (pointsFooter) pointsFooter.style.display = 'none';
+
+    // 4. เปลี่ยนปุ่มกดขอแต้ม เป็นป้ายแจ้งเตือนสีแดง
+    document.getElementById('action-area').innerHTML = `
+      <div style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.25);border-radius:16px;padding:18px;text-align:center">
+        <p style="color:#ef4444;font-weight:700;font-size:1rem;margin-bottom:6px">⚠️ ไม่สามารถใช้งานได้</p>
+        <p style="color:rgba(239,68,68,.7);font-size:.85rem;line-height:1.5">ร้านค้านี้ยังไม่ได้ต่ออายุแพ็กเกจระบบแสตมป์<br/>ประวัติและแต้มจะกลับมาเมื่อร้านค้าต่ออายุ</p>
+      </div>`;
+    return; // สั่งหยุดโค้ดตรงนี้เลย ไม่ต้อง Render อย่างอื่นต่อ
+  }
+
+  // 🟢 ถ้าร้านสถานะปกติ (Active) ให้แสดงทุกอย่างตามปกติ
+  const rewardEl = document.getElementById('reward-text');
+  rewardEl.style.display = 'block';
+  const rewardLabel = shop.rewardText && shop.rewardText.trim() ? shop.rewardText.trim() : 'แลกฟรีได้เลย';
+  if (remaining === 0) {
+    rewardEl.innerHTML = `🎉 <span style="color:var(--text);font-weight:600">ครบแล้ว! กด${rewardLabel} ↓</span>`;
+  } else {
+    rewardEl.innerHTML = `อีก <span style="color:var(--text);font-weight:600">${remaining} แต้ม</span> ${rewardLabel}!`;
+  }
+
+  // คืนค่า CSS กลับมาให้เป็นปกติ (เผื่อโดนซ่อนไปตอนร้านโดนระงับ)
+  document.querySelector('.tab-bar').style.display = 'flex';
+  const pointsFooter = document.querySelector('.stamp-card .mt-5');
+  if (pointsFooter) pointsFooter.style.display = 'flex';
+  document.getElementById('stamp-grid').className = "grid grid-cols-5 gap-3 justify-items-center mb-2";
+
   document.getElementById('points-count').textContent = currentPoints;
   document.getElementById('max-points-display').textContent = `/ ${maxPoints}`;
+  
   renderStampGrid(currentPoints, maxPoints);
+  renderActionArea(shop.canRequestPoints, shop.planType, currentPoints, maxPoints);
 
   if (shop.status === 'suspended') {
     document.getElementById('action-area').innerHTML = `
@@ -664,6 +878,7 @@ async function requestPoint() {
 
 // ── HISTORY ──
 async function loadHistory() {
+  if (shopData && shopData.status === 'suspended') return;
   document.getElementById('history-loading').classList.remove('hidden');
   document.getElementById('history-list').classList.add('hidden');
   document.getElementById('history-empty').classList.add('hidden');
@@ -674,6 +889,9 @@ async function loadHistory() {
     if (!data.success || !data.shops || data.shops.length === 0) {
       document.getElementById('history-empty').classList.remove('hidden'); return;
     }
+    // ★ เซฟ cache + คำนวณ streak ทันทีจากข้อมูลที่ได้มา
+    historyCache = data.shops;
+    applyStreak(calcStreakFromShops(data.shops));
     renderHistory(data.shops);
   } catch(err) {
     document.getElementById('history-loading').classList.add('hidden');
@@ -754,6 +972,198 @@ async function redeemPoint() {
     requesting=false;
     if(btn){btn.textContent='🎁 กดแลกรางวัล';btn.disabled=false;}
   }
+}
+
+// ══════════════════════════════════════════════════════════
+//  STREAK — คำนวณ client-side จาก logs ทุกร้านรวมกัน
+//  ไม่ต้องเรียก API เพิ่ม ใช้ข้อมูลจาก get_customer_history
+//  นับ "วันที่ได้แต้มในระบบ (ทุกร้าน)" ต่อเนื่องถึงวันนี้
+// ══════════════════════════════════════════════════════════
+let streakCache = 0;
+
+/**
+ * คำนวณ streak จาก shops[] ที่ได้มาจาก get_customer_history
+ * @param {Array} shops  — array of { logs:[{date:'dd/MM/yyyy HH:mm', action, points}] }
+ * @returns {number} จำนวนวันต่อเนื่อง
+ */
+function calcStreakFromShops(shops) {
+  const dateSet = new Set();
+  for (const shop of shops) {
+    for (const log of (shop.logs || [])) {
+      if (!log.date || log.date === '—') continue;
+      const parts = log.date.split(' ')[0].split('/');
+      if (parts.length === 3) {
+        const iso = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        dateSet.add(iso);
+      }
+    }
+  }
+
+  if (dateSet.size === 0) return 0;
+  const sorted = [...dateSet].sort().reverse();
+
+  // 🟢 สร้างฟังก์ชันดึงวันที่แบบเวลาไทย (ป้องกันบั๊ก UTC ข้ามวัน)
+  const toLocalIso = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const now = new Date();
+  const todayStr = toLocalIso(now);
+  const yest = new Date(now.getTime() - 86400000);
+  const yestStr = toLocalIso(yest);
+
+  if (sorted[0] !== todayStr && sorted[0] !== yestStr) return 0;
+
+  let streak  = 0;
+  let expectDate = sorted[0];
+
+  for (const d of sorted) {
+    if (d === expectDate) {
+      streak++;
+      // ถอยหลังไป 1 วันแบบปลอดภัย (เซ็ตเวลาเที่ยงกัน Timezone เลื่อน)
+      const prev = new Date(expectDate + "T12:00:00");
+      prev.setDate(prev.getDate() - 1);
+      expectDate = toLocalIso(prev);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/** แสดง/ซ่อน streak badge + streak row ใน rank tab */
+function applyStreak(n) {
+  streakCache = n;
+  const badge = document.getElementById('streak-badge');
+  if (n >= 1) {
+    badge.classList.remove('hidden'); badge.classList.add('flex');
+    document.getElementById('streak-num').textContent = n;
+  } else {
+    badge.classList.add('hidden'); badge.classList.remove('flex');
+  }
+  const row = document.getElementById('streak-row');
+  if (row) {
+    if (n >= 1) { row.classList.remove('hidden'); updateStreakLabel(n); }
+    else row.classList.add('hidden');
+  }
+}
+
+/**
+ * loadStreak — เรียกหลัง loadHistory โหลดเสร็จแล้ว (ใช้ historyCache)
+ * ถ้า history ยังไม่โหลด จะดึงมาเองก่อนแล้วค่อยคำนวณ
+ */
+let historyCache = null;  // เก็บ shops[] ล่าสุดจาก get_customer_history
+
+async function loadStreak() {
+  try {
+    let shops = historyCache;
+    if (!shops) {
+      // ดึง history เองเพื่อคำนวณ streak (ไม่แสดง UI history)
+      const res = await apiPost({ action: 'get_customer_history', phone: userPhone });
+      shops = (res.success && res.shops) ? res.shops : [];
+      historyCache = shops;
+    }
+    const n = calcStreakFromShops(shops);
+    applyStreak(n);
+  } catch(e) {
+    applyStreak(0);
+  }
+}
+
+// ── ข้อมูล rank cache ──
+let rankDataShop   = null; // { myPts, topPts, topCusts }
+let rankDataGlobal = null;
+
+// ── โหลดอันดับ (Rank) ──
+async function loadRank() {
+  if (shopData && shopData.status === 'suspended') return;
+  document.getElementById('rank-loading').classList.remove('hidden');
+  document.getElementById('rank-content').classList.add('hidden');
+  try {
+    const res = await apiPost({ action: 'get_rank', shopId, phone: userPhone });
+    rankLoaded = true;
+    rankDataShop = {
+      myPts:    res.myPts    ?? 0,
+      topPts:   res.topPts   ?? 0,
+      topCusts: res.topCusts ?? [],
+    };
+    // global อาจมีหรือไม่มีก็ได้ขึ้นอยู่กับ GAS
+    rankDataGlobal = res.globalTop ? {
+      myPts:    res.myGlobalPts ?? res.myPts,
+      topPts:   res.globalTopPts ?? res.topPts,
+      topCusts: res.globalTop,
+    } : rankDataShop; // fallback = ข้อมูลร้าน
+
+    document.getElementById('rank-loading').classList.add('hidden');
+    document.getElementById('rank-content').classList.remove('hidden');
+    document.getElementById('my-score').textContent = rankDataShop.myPts;
+    document.getElementById('top-score').textContent =
+      currentRankTab === 'shop' ? rankDataShop.topPts : rankDataGlobal.topPts;
+
+    // streak row — ใช้ cache ถ้ามีแล้ว ไม่ยิง API ซ้ำ
+    if (streakCache >= 1) {
+      const row = document.getElementById('streak-row');
+      if (row) { row.classList.remove('hidden'); updateStreakLabel(streakCache); }
+    }
+    renderLeaderboard();
+  } catch(e) {
+    document.getElementById('rank-loading').classList.add('hidden');
+    showToast('⚠️ คำนวณอันดับไม่สำเร็จ', '#ff6b6b');
+  }
+}
+
+function censorPhone(phone) {
+  // 0812345678 → 081-xxx-x678  (censor หลัก 4-7)
+  const p = String(phone).replace(/\D/g,'');
+  if (p.length === 10) return p.slice(0,3) + '-xxx-x' + p.slice(-3);
+  if (p.length === 9)  return p.slice(0,2) + '-xxx-x' + p.slice(-3);
+  return p.slice(0,3) + '****' + p.slice(-2);
+}
+
+function renderLeaderboard() {
+  const data = currentRankTab === 'shop' ? rankDataShop : rankDataGlobal;
+  if (!data) return;
+  document.getElementById('top-score').textContent = data.topPts;
+
+  const medals = ['🥇','🥈','🥉'];
+  const myNrm = userPhone.replace(/\D/g,'');
+  let myRank = -1;
+  const rows = (data.topCusts || []).map((c, i) => {
+    const isMe = c.phone === myNrm;
+    if (isMe) myRank = i + 1;
+    const display = isMe
+      ? `<span style="color:var(--accent);font-weight:800">${formatPhone(myNrm)}</span> <span style="font-size:.75rem;opacity:.7">(${currentLang==='th'?'คุณ':'You'})</span>`
+      : `<span>${censorPhone(c.phone)}</span>`;
+    const medal = i < 3
+      ? `<span class="text-xl w-8 text-center">${medals[i]}</span>`
+      : `<span class="w-8 text-center font-mono text-sm" style="color:var(--muted)">${i+1}</span>`;
+    return `<div class="lb-row${isMe?' is-me':''}">
+      ${medal}
+      <span class="font-mono text-sm flex-1">${display}</span>
+      <span class="font-mono font-bold text-base${isMe?' text-accent':''}" style="${isMe?'color:var(--accent)':''}">${c.currentPoints ?? c.pts ?? 0}</span>
+    </div>`;
+  });
+
+  // ถ้าคุณไม่อยู่ใน top → แสดงแถวคุณต่อท้ายพร้อมแต้มที่ถูกต้อง
+  const notInTop = myRank < 0;
+  const myDisplayPts = currentRankTab === 'shop' ? data.myPts : (rankDataGlobal?.myPts ?? 0);
+  const myRow = notInTop ? `
+    <div class="lb-row is-me" style="border-top:2px dashed rgba(245,200,66,.2);margin-top:4px">
+      <span class="w-8 text-center font-mono text-sm" style="color:var(--muted)">…</span>
+      <span class="font-mono text-sm flex-1">
+        <span style="color:var(--accent);font-weight:800">${formatPhone(myNrm)}</span>
+        <span style="font-size:.75rem;opacity:.7"> (${currentLang==='th'?'คุณ':'You'})</span>
+      </span>
+      <span class="font-mono font-bold text-base" style="color:var(--accent)">${myDisplayPts}</span>
+    </div>` : '';
+
+  document.getElementById('lb-list').innerHTML =
+    rows.length
+      ? rows.join('') + myRow
+      : `<p class="text-center text-sm py-8" style="color:var(--muted)">${currentLang==='th'?'ยังไม่มีอันดับ':'No data yet'}</p>`;
 }
 
 // ── LOGOUT ──
