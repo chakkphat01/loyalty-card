@@ -341,8 +341,9 @@
 
   <!-- Tabs (Plan S) -->
   <div class="fade-up d1 tab-bar mb-5">
-    <button class="tab-btn active" id="s-tab-add" onclick="sSwitch('add')">➕ เพิ่มแต้ม</button>
-    <button class="tab-btn" id="s-tab-history" onclick="sSwitch('history')">👥 ลูกค้า</button>
+    <button class="tab-btn active" id="s-tab-add"     onclick="sSwitch('add')">➕ เพิ่มแต้ม</button>
+    <button class="tab-btn"       id="s-tab-history"  onclick="sSwitch('history')">👥 ลูกค้า</button>
+    <button class="tab-btn"       id="s-tab-rank"     onclick="sSwitch('rank')">🏆 อันดับ</button>
   </div>
 
   <!-- Pane: add -->
@@ -378,12 +379,18 @@
     </div>
   </div>
 
-  <!-- Pane: history -->
+  <!-- Pane: history (Plan S) -->
   <div id="s-pane-history" class="hidden">
     <input class="search-box mb-4" id="s-search" type="tel" placeholder="🔍 ค้นหาเบอร์โทร..." oninput="filterCustomers('s')">
     <div id="s-cust-loading" class="text-center py-8" style="color:var(--muted)">⏳ กำลังโหลด...</div>
     <div id="s-cust-list" class="hidden"></div>
     <div id="s-cust-empty" class="hidden text-center py-8" style="color:var(--muted)">ไม่มีลูกค้า</div>
+  </div>
+
+  <!-- Pane: rank (Plan S) -->
+  <div id="s-pane-rank" class="hidden">
+    <div id="s-rank-loading" class="text-center py-10" style="color:var(--muted)">⏳ กำลังโหลด...</div>
+    <div id="s-rank-content" class="hidden"></div>
   </div>
 </div>
 
@@ -412,8 +419,9 @@
 
   <!-- Tabs (Plan ML) -->
   <div class="fade-up d1 tab-bar mb-5">
-    <button class="tab-btn active" id="ml-tab-main" onclick="mlSwitch('main')">🎯 คิว & เพิ่มแต้ม</button>
-    <button class="tab-btn" id="ml-tab-customers" onclick="mlSwitch('customers')">👥 ลูกค้า</button>
+    <button class="tab-btn active" id="ml-tab-main"      onclick="mlSwitch('main')">🎯 คิว & เพิ่มแต้ม</button>
+    <button class="tab-btn"       id="ml-tab-customers"  onclick="mlSwitch('customers')">👥 ลูกค้า</button>
+    <button class="tab-btn"       id="ml-tab-rank"       onclick="mlSwitch('rank')">🏆 อันดับ</button>
   </div>
 
   <!-- Pane: main -->
@@ -487,6 +495,12 @@
     <div id="ml-cust-loading" class="text-center py-8" style="color:var(--muted)">⏳ กำลังโหลด...</div>
     <div id="ml-cust-list" class="hidden"></div>
     <div id="ml-cust-empty" class="hidden text-center py-8" style="color:var(--muted)">ไม่มีลูกค้า</div>
+  </div>
+
+  <!-- Pane: rank (Plan ML) -->
+  <div id="ml-pane-rank" class="hidden">
+    <div id="ml-rank-loading" class="text-center py-10" style="color:var(--muted)">⏳ กำลังโหลด...</div>
+    <div id="ml-rank-content" class="hidden"></div>
   </div>
 </div>
 
@@ -700,23 +714,108 @@ function doLogout() {
 }
 
 // ── TABS PLAN S ──
+// ── SHOP RANK (คำนวณจาก customersCache ที่มีอยู่แล้ว) ──
+function renderShopRank(prefix) {
+  const loadingEl = document.getElementById(`${prefix}-rank-loading`);
+  const contentEl = document.getElementById(`${prefix}-rank-content`);
+
+  // ถ้ายังไม่มีข้อมูล → โหลดก่อน
+  if (!custLoaded || customersCache.length === 0) {
+    loadingEl.classList.remove('hidden');
+    contentEl.classList.add('hidden');
+    loadCustomers(prefix).then(() => renderShopRank(prefix));
+    return;
+  }
+
+  loadingEl.classList.add('hidden');
+  contentEl.classList.remove('hidden');
+
+  // เรียงจากมากไปน้อย (customersCache เรียงแล้วจาก GAS)
+  const sorted = [...customersCache].sort((a,b) => b.currentPoints - a.currentPoints);
+  const maxPts  = sorted[0]?.maxPoints || 10;
+  const topPts  = sorted[0]?.currentPoints || 0;
+  const medals  = ['🥇','🥈','🥉'];
+
+  const rows = sorted.slice(0, 20).map((c, i) => {
+    const pct     = Math.min(100, Math.round((c.currentPoints / maxPts) * 100));
+    const isFull  = c.currentPoints >= maxPts;
+    const medal   = i < 3
+      ? `<span class="text-xl">${medals[i]}</span>`
+      : `<span class="text-sm font-bold" style="color:var(--muted);min-width:28px;text-align:center">${i+1}</span>`;
+    const barColor = isFull ? 'var(--green)' : 'var(--amber)';
+    const badge   = isFull
+      ? `<span class="text-xs font-semibold" style="color:var(--green)">✅ ครบ</span>`
+      : `<span class="text-xs" style="color:var(--muted)">${c.currentPoints}/${maxPts}</span>`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:center;min-width:28px">${medal}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600">${fmtPhone(c.phone)}</span>
+            ${badge}
+          </div>
+          <div style="background:var(--faint);border-radius:99px;height:5px;overflow:hidden">
+            <div style="background:${barColor};height:100%;width:${pct}%;border-radius:99px;transition:width .5s ease"></div>
+          </div>
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1rem;min-width:28px;text-align:right">${c.currentPoints}</span>
+      </div>`;
+  }).join('');
+
+  const readyCount  = customersCache.filter(c => c.currentPoints >= maxPts).length;
+  const totalVisits = customersCache.reduce((s,c) => s + (c.totalVisits||0), 0);
+
+  contentEl.innerHTML = `
+    <!-- Stats summary -->
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="stat-card" style="text-align:center">
+        <p class="heading text-2xl font-bold">${customersCache.length}</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">ลูกค้าทั้งหมด</p>
+      </div>
+      <div class="stat-card" style="text-align:center">
+        <p class="heading text-2xl font-bold" style="color:var(--green)">${readyCount}</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">ครบแลกแล้ว</p>
+      </div>
+      <div class="stat-card" style="text-align:center">
+        <p class="heading text-2xl font-bold">${topPts}</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">สูงสุด (แต้ม)</p>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <p class="section-label mb-3">🏆 อันดับลูกค้าประจำร้าน</p>
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:18px;overflow:hidden">
+      ${rows || `<p style="text-align:center;padding:32px;color:var(--muted)">ยังไม่มีข้อมูล</p>`}
+      ${sorted.length > 20 ? `<p style="text-align:center;padding:10px;font-size:.8rem;color:var(--muted)">แสดง 20 อันดับแรก (ทั้งหมด ${sorted.length} คน)</p>` : ''}
+    </div>
+
+    <!-- Refresh -->
+    <button onclick="custLoaded=false;renderShopRank('${prefix}')"
+      style="width:100%;margin-top:14px;padding:12px;border-radius:14px;border:1.5px solid var(--border);background:var(--faint);font-family:'IBM Plex Sans Thai',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;color:var(--muted)">
+      🔄 รีเฟรชอันดับ
+    </button>
+  `;
+}
+
 function sSwitch(tab) {
   currentTab_s = tab;
-  document.getElementById('s-tab-add').classList.toggle('active', tab==='add');
-  document.getElementById('s-tab-history').classList.toggle('active', tab==='history');
-  document.getElementById('s-pane-add').classList.toggle('hidden', tab!=='add');
-  document.getElementById('s-pane-history').classList.toggle('hidden', tab!=='history');
+  ['add','history','rank'].forEach(t => {
+    document.getElementById('s-tab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('s-pane-'+t)?.classList.toggle('hidden', t!==tab);
+  });
   if (tab==='history' && !custLoaded) loadCustomers('s');
+  if (tab==='rank') renderShopRank('s');
 }
 
 // ── TABS PLAN ML ──
 function mlSwitch(tab) {
   currentTab_ml = tab;
-  document.getElementById('ml-tab-main').classList.toggle('active', tab==='main');
-  document.getElementById('ml-tab-customers').classList.toggle('active', tab==='customers');
-  document.getElementById('ml-pane-main').classList.toggle('hidden', tab!=='main');
-  document.getElementById('ml-pane-customers').classList.toggle('hidden', tab!=='customers');
+  ['main','customers','rank'].forEach(t => {
+    document.getElementById('ml-tab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('ml-pane-'+t)?.classList.toggle('hidden', t!==tab);
+  });
   if (tab==='customers' && !custLoaded) loadCustomers('ml');
+  if (tab==='rank') renderShopRank('ml');
 }
 
 // ── LOAD CUSTOMERS ──
@@ -724,6 +823,9 @@ async function loadCustomers(prefix) {
   document.getElementById(`${prefix}-cust-loading`).classList.remove('hidden');
   document.getElementById(`${prefix}-cust-list`).classList.add('hidden');
   document.getElementById(`${prefix}-cust-empty`).classList.add('hidden');
+
+  if (prefix === 'ml') document.getElementById('ml-stats').classList.add('hidden');
+
   try {
     const r = await apiPost({action:'get_shop_customers', shopId, password});
     custLoaded = true;
