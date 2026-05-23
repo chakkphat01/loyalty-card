@@ -557,6 +557,8 @@ function init() {
     showPage('card-page');
     document.getElementById('display-phone').textContent = formatPhone(userPhone);
     loadCardData();
+    // ★ โหลด streak ทันทีตั้งแต่เปิดหน้า ไม่รอ history tab
+    loadStreakFromAPI();
   }
 }
 
@@ -857,6 +859,10 @@ async function requestPoint() {
     const sec = Math.ceil((REQUEST_COOLDOWN_MS - (now - lastRequestTime)) / 1000);
     showToast(`⏱ กรุณารอ ${sec} วินาทีก่อนกดใหม่`, '#f59e0b'); return;
   }
+  // ★ client-side rate limit เพิ่มเติม: max 1 req / 5 วิ ต่อ action
+  if (!_checkClientRL('req_'+shopId, 5000)) {
+    showToast('⏱ กรุณารอสักครู่', '#f59e0b'); return;
+  }
   requesting = true;
   lastRequestTime = now;
   const btn = document.getElementById('request-btn');
@@ -993,8 +999,11 @@ function calcStreakFromShops(shops) {
       if (!log.date || log.date === '—') continue;
       const parts = log.date.split(' ')[0].split('/');
       if (parts.length === 3) {
-        const iso = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-        dateSet.add(iso);
+        // รองรับ yy (2-digit) และ yyyy (4-digit)
+        let yr = parts[2];
+        if (yr.length === 2) yr = '20' + yr;
+        const iso = `${yr}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) dateSet.add(iso);
       }
     }
   }
@@ -1034,20 +1043,30 @@ function calcStreakFromShops(shops) {
   return streak;
 }
 
-/** แสดง/ซ่อน streak badge + streak row ใน rank tab */
+/** แสดง/ซ่อน streak badge + streak row
+ *  ★ FIX: ขึ้นตั้งแต่วันแรก (n >= 1) และใช้ style โดยตรงแทน classList
+ *         เพื่อหลีกเลี่ยง Tailwind CSS conflict
+ */
 function applyStreak(n) {
   streakCache = n;
   const badge = document.getElementById('streak-badge');
   if (n >= 1) {
-    badge.classList.remove('hidden'); badge.classList.add('flex');
+    badge.style.display = 'flex';
     document.getElementById('streak-num').textContent = n;
+    badge.title = n + ' วันติดต่อกัน';
+    // ไม่รีบ animate ถ้า n=1 ให้แสดงเงียบๆ ถ้า n>3 ให้ bounce เล็กน้อย
+    if (n >= 3) {
+      badge.style.animation = 'none';
+      requestAnimationFrame(() => { badge.style.animation = ''; });
+    }
   } else {
-    badge.classList.add('hidden'); badge.classList.remove('flex');
+    badge.style.display = 'none';
   }
+  // streak row ใน rank tab
   const row = document.getElementById('streak-row');
   if (row) {
-    if (n >= 1) { row.classList.remove('hidden'); updateStreakLabel(n); }
-    else row.classList.add('hidden');
+    row.style.display = n >= 1 ? 'flex' : 'none';
+    if (n >= 1) updateStreakLabel(n);
   }
 }
 
@@ -1061,7 +1080,6 @@ async function loadStreak() {
   try {
     let shops = historyCache;
     if (!shops) {
-      // ดึง history เองเพื่อคำนวณ streak (ไม่แสดง UI history)
       const res = await apiPost({ action: 'get_customer_history', phone: userPhone });
       shops = (res.success && res.shops) ? res.shops : [];
       historyCache = shops;
@@ -1070,6 +1088,19 @@ async function loadStreak() {
     applyStreak(n);
   } catch(e) {
     applyStreak(0);
+  }
+}
+
+// ★ FIX: โหลด streak จาก GAS โดยตรง (get_streak action)
+// ยิงตั้งแต่ init() — ขึ้น 🔥 ทันทีตั้งแต่วันแรกที่ได้แต้ม
+async function loadStreakFromAPI() {
+  try {
+    const res = await apiPost({ action: 'get_streak', shopId, phone: userPhone });
+    if (res.success && typeof res.streak === 'number') {
+      applyStreak(res.streak);
+    }
+  } catch(e) {
+    // silently fail — จะ fallback ไปใช้ calcStreakFromShops เมื่อ history โหลด
   }
 }
 
@@ -1211,18 +1242,46 @@ function decodeSlug(slug) {
 // ════════════════════════════════════════════════
 //  apiPost — JSONP (ไม่มี CORS กับ GAS)
 // ════════════════════════════════════════════════
+// ★ SECURITY: rate limit per action (client-side)
+const _rlMap = {};
+function _checkClientRL(key, limitMs) {
+  const now = Date.now();
+  if (_rlMap[key] && (now - _rlMap[key]) < limitMs) return false;
+  _rlMap[key] = now;
+  return true;
+}
+
+// ★ SECURITY: sanitize string input
+function _sanitize(v, maxLen=64) {
+  if (typeof v !== 'string') return String(v ?? '');
+  return v.replace(/[<>"'`]/g, '').slice(0, maxLen);
+}
+
 function apiPost(body) {
   return new Promise((resolve, reject) => {
-    // Client-side token: ป้องกัน spam
-    const token = btoa(body.phone || '').slice(0,8);
-    const cbName = 'gcb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+    // Sanitize inputs ก่อนส่งเสมอ
+    const safeBody = {};
+    for (const [k,v] of Object.entries(body)) {
+      safeBody[k] = typeof v === 'string' ? _sanitize(v) : v;
+    }
+    // Token rotation: HMAC-like (timestamp + shopId hash)
+    const ts = Date.now();
+    const raw = (safeBody.phone||'') + (safeBody.shopId||shopId||'') + ts;
+    const token = btoa(raw).slice(0,12).replace(/[+/=]/g,'x');
+
+    const cbName = 'gcb_' + ts + '_' + Math.floor(Math.random()*99999);
     const script = document.createElement('script');
-    const timer = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 15000);
-    function cleanup() { clearTimeout(timer); delete window[cbName]; script.parentNode?.removeChild(script); }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Timeout — ตรวจสอบการเชื่อมต่อ')); }, 15000);
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
     window[cbName] = (data) => { cleanup(); resolve(data); };
     script.onerror = () => { cleanup(); reject(new Error('Network error')); };
-    const encoded = encodeURIComponent(JSON.stringify({ ...body, _t: token }));
-    script.src = GAS_URL + '?callback=' + cbName + '&data=' + encoded;
+
+    const payload = { ...safeBody, _t: token, _ts: ts };
+    script.src = GAS_URL + '?callback=' + cbName + '&data=' + encodeURIComponent(JSON.stringify(payload));
     document.head.appendChild(script);
   });
 }
