@@ -832,7 +832,7 @@ function renderShopRank(prefix) {
         <div style="display:flex;align-items:center;justify-content:center;min-width:28px">${medal}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600">${fmtPhone(c.phone)}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600">${censorPhone(c.phone)}</span>
             ${badge}
           </div>
           <div style="background:var(--faint);border-radius:99px;height:5px;overflow:hidden">
@@ -847,7 +847,6 @@ function renderShopRank(prefix) {
   const totalVisits = customersCache.reduce((s,c) => s + (c.totalVisits||0), 0);
 
   contentEl.innerHTML = `
-    <!-- Stats summary -->
     <div class="grid grid-cols-3 gap-3 mb-5">
       <div class="stat-card" style="text-align:center">
         <p class="heading text-2xl font-bold">${customersCache.length}</p>
@@ -863,14 +862,12 @@ function renderShopRank(prefix) {
       </div>
     </div>
 
-    <!-- Leaderboard -->
     <p class="section-label mb-3">🏆 อันดับลูกค้าประจำร้าน</p>
     <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:18px;overflow:hidden">
       ${rows || `<p style="text-align:center;padding:32px;color:var(--muted)">ยังไม่มีข้อมูล</p>`}
       ${sorted.length > 20 ? `<p style="text-align:center;padding:10px;font-size:.8rem;color:var(--muted)">แสดง 20 อันดับแรก (ทั้งหมด ${sorted.length} คน)</p>` : ''}
     </div>
 
-    <!-- Refresh -->
     <button onclick="custLoaded=false;renderShopRank('${prefix}')"
       style="width:100%;margin-top:14px;padding:12px;border-radius:14px;border:1.5px solid var(--border);background:var(--faint);font-family:'IBM Plex Sans Thai',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;color:var(--muted)">
       🔄 รีเฟรชอันดับ
@@ -954,7 +951,7 @@ function renderCustomers(prefix, list) {
     div.innerHTML = `
       <div class="flex items-center justify-between">
         <div>
-          <p class="font-bold text-sm" style="font-family:'IBM Plex Mono',monospace">${fmtPhone(c.phone)}</p>
+          <p class="font-bold text-sm" style="font-family:'IBM Plex Mono',monospace">${censorPhone(c.phone)}</p>
           <p class="text-xs mt-0.5" style="color:var(--muted)">ล่าสุด: ${c.lastVisit||'—'} · มา ${c.totalVisits||0} ครั้ง</p>
         </div>
         <div class="text-right flex-shrink-0 ml-3">
@@ -973,7 +970,7 @@ function renderCustomers(prefix, list) {
 }
 
 function showCustDetail(c) {
-  document.getElementById('cust-modal-phone').textContent = fmtPhone(c.phone);
+  document.getElementById('cust-modal-phone').textContent = censorPhone(c.phone);
   const maxPts = c.maxPoints || 10;
   const pct = Math.min(100, Math.round((c.currentPoints/maxPts)*100));
   const rows = (c.logs || []).map(l=>
@@ -1108,7 +1105,7 @@ function buildQueueCard(item) {
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 mb-0.5">
         <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 new-badge" style="background:${dotColor}"></span>
-        <span class="font-bold text-lg" style="font-family:'IBM Plex Mono',monospace;color:var(--ink)">${fmtPhone(item.phone)}</span>
+        <span class="font-bold text-lg" style="font-family:'IBM Plex Mono',monospace;color:var(--ink)">${censorPhone(item.phone)}</span>
       </div>
       <p class="text-xs" style="color:var(--muted)">${label} · ${timeStr}</p>
     </div>
@@ -1215,6 +1212,12 @@ function playBeep() {
 
 // ── HELPERS ──
 function fmtPhone(p) { const s=String(p).replace(/\D/g,'').padEnd(10,' '); return s.replace(/(\S{3})(\S{3})(\S{4})/,'$1-$2-$3'); }
+function censorPhone(p) { 
+  const s = String(p).replace(/\D/g,''); 
+  if (s.length === 10) return s.slice(0,3) + '-xxx-x' + s.slice(-3); // จะได้ 088-xxx-x555
+  if (s.length === 9) return s.slice(0,2) + '-xxx-x' + s.slice(-3);
+  return s; 
+}
 function showToast(msg,bg='#333') {
   document.querySelectorAll('.toast').forEach(t=>t.remove());
   const t=document.createElement('div'); t.className='toast'; t.style.background=bg; t.style.color='#fff'; t.textContent=msg;
