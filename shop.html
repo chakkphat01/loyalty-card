@@ -550,6 +550,12 @@ let lockoutTimer   = null;
 
 // ── STATE ──
 let shopId=null, password=null, planType=null;
+
+// ★ hash password สั้น 16 hex — ใช้ verify session token
+async function sha256Short(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
+}
 let pinBuffer='', sBuf='', mlBuf='';
 let pollTimer=null, knownQueue=new Set(), isPolling=false;
 let customersCache=[]; // raw list
@@ -657,9 +663,14 @@ async function init() {
   const rawShop=p.get('shop')||'';
   shopId=rawShop.match(/^[0-9a-z]{6,}$/)?decodeSlug(rawShop):rawShop;
   if (!shopId) { showPage('page-error'); return; }
-  const saved = sessionStorage.getItem('shopPass_' + shopId);
-  if (saved) { password = saved; await proceedAfterLogin(); }
-  else showPage('page-login');
+  const saved = sessionStorage.getItem('shopAuth_'+shopId);
+  if (saved) {
+    try {
+      // decode obfuscated password
+      password = atob(saved).split('').reverse().join('');
+      await proceedAfterLogin();
+    } catch { password = null; showPage('page-login'); }
+  } else showPage('page-login');
 }
 
 // ── PAGE ──
@@ -750,7 +761,10 @@ async function pinConfirm() {
     password = null; return;
   }
   failedAttempts = 0;
-  sessionStorage.setItem('shopPass_'+shopId, password);
+  // ★ เก็บ password แบบ obfuscate ใน sessionStorage
+  // ไม่ใช่ plaintext ตรงๆ แต่ reverse+btoa กัน shoulder surfing
+  const obfPw = btoa(password.split('').reverse().join(''));
+  sessionStorage.setItem('shopAuth_'+shopId, obfPw);
   proceedAfterLogin();
 }
 async function verifyPassword() {
@@ -788,7 +802,7 @@ async function proceedAfterLogin() {
 
 function doLogout() {
   if (!confirm('ออกจากระบบใช่ไหม?')) return;
-  sessionStorage.removeItem('shopPass_'+shopId);
+  sessionStorage.removeItem('shopAuth_'+shopId);
   stopPolling();
   password=null; pinBuffer=''; planType=null; custLoaded=false; customersCache=[];
   updatePinDots(); showPage('page-login');
