@@ -246,6 +246,35 @@
          0    0   6px rgba(0,0,0,.4);
     }
 
+    /* ── ANTI-SPAM ── */
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+      40%{transform:translateX(7px)}   60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+    }
+    .shake { animation: shake .4s ease; }
+    .captcha-box {
+      background:var(--faint); border:1.5px solid var(--border);
+      border-radius:16px; padding:14px 16px; margin-bottom:14px;
+    }
+    .captcha-input {
+      width:100%; background:var(--surface); border:1.5px solid var(--border);
+      border-radius:12px; padding:11px 14px; font-size:1.6rem;
+      font-family:'Prompt',sans-serif; font-weight:700; color:var(--text);
+      text-align:center; letter-spacing:.25em; outline:none;
+      transition:border-color .2s; -webkit-appearance:none;
+    }
+    .captcha-input:focus { border-color:var(--accent); }
+    .captcha-input.error { border-color:#ef4444 !important; }
+    .lock-banner {
+      background:rgba(239,68,68,.08); border:1.5px solid rgba(239,68,68,.25);
+      border-radius:16px; padding:14px; text-align:center; margin-bottom:12px;
+    }
+    .login-err {
+      background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2);
+      border-radius:12px; padding:10px 14px; font-size:.82rem; font-weight:600;
+      color:#ef4444; text-align:center; margin-bottom:10px;
+    }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -294,15 +323,35 @@
     <p style="color:var(--muted)" class="text-sm mt-1">กรอกเบอร์โทรเพื่อเริ่มสะสมแต้ม</p>
   </div>
 
+  <!-- Lock banner -->
+  <div id="login-lock-banner" class="lock-banner hidden">
+    <div class="text-2xl mb-1">🔒</div>
+    <p class="font-bold text-sm" style="color:#ef4444">ลองผิดบ่อยเกินไป</p>
+    <p class="text-xs mt-1" style="color:rgba(239,68,68,.7)">กรุณารอ <span id="lock-countdown" class="font-bold">30</span> วินาที</p>
+  </div>
+  <div id="login-err" class="login-err hidden"></div>
+
   <!-- Phone display -->
-  <div class="fade-up delay-1 mb-6 text-center">
-    <div class="inline-block rounded-2xl px-6 py-4 min-w-[200px]" style="background:var(--faint);border:1px solid var(--border)">
+  <div class="fade-up delay-1 mb-4 text-center">
+    <div id="phone-box" class="inline-block rounded-2xl px-6 py-4 min-w-[200px]" style="background:var(--faint);border:1px solid var(--border)">
       <div id="phone-display" class="heading text-3xl font-bold tracking-widest mb-3 min-h-[40px]" style="color:var(--muted)"></div>
       <div class="phone-dots" id="phone-dots">
         <span></span><span></span><span></span><span></span><span></span>
         <span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
+  </div>
+
+  <!-- CAPTCHA -->
+  <div id="captcha-section" class="captcha-box hidden">
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-sm font-bold">🤖 ยืนยันว่าไม่ใช่บอท</p>
+      <button onclick="refreshCaptcha()" style="font-size:.72rem;color:var(--muted);background:var(--faint);border:1px solid var(--border);cursor:pointer;padding:3px 9px;border-radius:8px">🔄</button>
+    </div>
+    <p class="text-center text-xl font-bold mb-3" id="captcha-question" style="color:var(--accent)">— + — = ?</p>
+    <input id="captcha-input" class="captcha-input" type="tel" inputmode="numeric"
+      maxlength="2" placeholder="?" oninput="this.value=this.value.replace(/\D/g,'').slice(0,2)" autocomplete="off"/>
+    <p id="captcha-hint" class="text-xs text-center mt-2" style="color:var(--muted)">กรอกคำตอบ แล้วกด ✓</p>
   </div>
 
   <!-- Numpad -->
@@ -513,16 +562,16 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby-5p7TDLgkMw8UIfs5DAjfQAnYgiDPFD0IYDI29qftVglxyKsOL9ORj8PdXMZ1N5yx/exec';
 
 // ── RATE LIMIT (client-side guard) ──
-const REQUEST_COOLDOWN_MS = 30000; // 30 วินาที
-let lastRequestTime = 0;
+
+
 
 // ── STATE ──
-let shopId = null, userPhone = null, phoneBuffer = '', shopData = null, requesting = false;
+let shopId = null, userPhone = null, phoneBuffer = '', shopData = null;
 // ★ ข้อมูลติดต่อ — แก้เป็นของร้าน
 const CONTACT = {
-  facebook: 'https://www.facebook.com/chakkaphat.sawangnet/about/?fb_profile_edit_entry_point=%7B%22click_point%22%3A%22edit_profile_button%22%2C%22feature%22%3A%22profile_header%22%7D&id=100039338199448&sk=about',
-  line:     'https://line.me/ti/p/kLxd_dZ-XH',
-  gmail:    'mailto:tatatata2039960@gmail.com?subject=สอบถามข้อมูลระบบ StampX',
+  facebook: 'https://facebook.com/ZER0Game',
+  line:     'https://line.me/ti/p/YOUR_LINE_ID',
+  gmail:    'mailto:your@email.com',
 };
 
 let historyLoaded = false, rankLoaded = false;
@@ -713,13 +762,134 @@ function updatePhoneDisplay() {
   el.style.color = phoneBuffer.length > 0 ? 'var(--text)' : 'var(--muted)';
   document.querySelectorAll('.phone-dots span').forEach((d,i) => d.classList.toggle('filled', i < phoneBuffer.length));
 }
-function numpadConfirm() {
-  if (phoneBuffer.length !== 10) { showToast('⚠️ กรุณากรอกเบอร์โทร 10 หลัก','#ff6b6b'); return; }
-  userPhone = phoneBuffer;
-  localStorage.setItem('userPhone', userPhone);
-  document.getElementById('display-phone').textContent = formatPhone(userPhone);
-  showPage('card-page');
-  loadCardData();
+// ══════════════════════════════════════════════════════════
+//  ANTI-SPAM LOGIN — 3 ชั้น
+//  ชั้น 1: Device Token — เครื่องเดิม/เบอร์เดิม ผ่านเลย
+//  ชั้น 2: Math CAPTCHA — กันบอท/สคริปต์
+//  ชั้น 3: Session Rate Limit — กันสแปมเบอร์มั่ว >10 เบอร์/5 นาที
+// ══════════════════════════════════════════════════════════
+const LOGIN_MAX_FAIL = 5;
+const LOGIN_LOCK_SEC = 30;
+let loginFailCount   = 0;
+let loginLockedUntil = 0;
+let captchaA = 0, captchaB = 0, captchaAnswer = 0;
+let captchaReady = false;
+let loginBusy    = false;
+
+function getDeviceToken(phone) {
+  return localStorage.getItem('dtoken_' + shopId + '_' + phone);
+}
+function setDeviceToken(phone) {
+  const raw = phone + shopId + navigator.userAgent.slice(0,30) + Date.now();
+  let h = 5381;
+  for (let i = 0; i < raw.length; i++) h = ((h << 5) + h) ^ raw.charCodeAt(i);
+  localStorage.setItem('dtoken_' + shopId + '_' + phone, 'dt' + Math.abs(h).toString(36));
+}
+
+function generateCaptcha() {
+  captchaA = Math.floor(Math.random() * 9) + 1;
+  captchaB = Math.floor(Math.random() * 9) + 1;
+  captchaAnswer = captchaA + captchaB;
+  document.getElementById('captcha-question').textContent = captchaA + ' + ' + captchaB + ' = ?';
+  const inp = document.getElementById('captcha-input');
+  inp.value = ''; inp.classList.remove('error');
+  document.getElementById('captcha-hint').textContent = 'กรอกคำตอบ แล้วกด ✓';
+  document.getElementById('captcha-hint').style.color = 'var(--muted)';
+}
+function refreshCaptcha() { generateCaptcha(); document.getElementById('captcha-input').focus(); }
+function showCaptcha() {
+  captchaReady = true; generateCaptcha();
+  document.getElementById('captcha-section').classList.remove('hidden');
+  setTimeout(() => document.getElementById('captcha-input').focus(), 120);
+}
+function hideCaptcha() {
+  captchaReady = false;
+  document.getElementById('captcha-section').classList.add('hidden');
+  document.getElementById('captcha-input').value = '';
+}
+
+function isLocked() { return Date.now() < loginLockedUntil; }
+function triggerLock() {
+  loginLockedUntil = Date.now() + LOGIN_LOCK_SEC * 1000;
+  loginFailCount = 0; hideCaptcha();
+  document.getElementById('login-lock-banner').classList.remove('hidden');
+  setNumpadDisabled(true); tickLock();
+}
+function tickLock() {
+  const rem = Math.ceil((loginLockedUntil - Date.now()) / 1000);
+  if (rem <= 0) {
+    document.getElementById('login-lock-banner').classList.add('hidden');
+    setNumpadDisabled(false); phoneBuffer = ''; updatePhoneDisplay(); return;
+  }
+  document.getElementById('lock-countdown').textContent = rem;
+  setTimeout(tickLock, 1000);
+}
+function setNumpadDisabled(d) {
+  document.querySelectorAll('.numpad-btn').forEach(b => { b.disabled = d; b.style.opacity = d ? '.3' : '1'; });
+}
+function recordLoginFail(msg) {
+  loginFailCount++;
+  if (loginFailCount >= LOGIN_MAX_FAIL) { triggerLock(); return; }
+  const left = LOGIN_MAX_FAIL - loginFailCount;
+  const box = document.getElementById('phone-box');
+  if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+  if (captchaReady) {
+    const sec = document.getElementById('captcha-section');
+    sec.classList.remove('shake'); void sec.offsetWidth; sec.classList.add('shake');
+    const inp = document.getElementById('captcha-input');
+    inp.classList.add('error'); inp.value = '';
+    document.getElementById('captcha-hint').textContent = '❌ ผิด — เหลือ ' + left + ' ครั้ง';
+    document.getElementById('captcha-hint').style.color = '#ef4444';
+    setTimeout(() => { inp.classList.remove('error'); generateCaptcha(); }, 700);
+  }
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = (msg || '❌') + ' — เหลือ ' + left + ' ครั้ง';
+  errEl.classList.remove('hidden');
+  setTimeout(() => errEl.classList.add('hidden'), 2500);
+}
+
+async function numpadConfirm() {
+  if (isLocked() || loginBusy) return;
+  if (phoneBuffer.length !== 10) { showToast('⚠️ กรุณากรอกเบอร์โทร 10 หลัก','#f59e0b'); return; }
+  const phone = phoneBuffer;
+
+  // ชั้น 1: Device token — เครื่องนี้เคย login เบอร์นี้แล้ว
+  if (getDeviceToken(phone)) { loginDone(phone); return; }
+
+  // ชั้น 2: CAPTCHA
+  if (!captchaReady) { showCaptcha(); return; }
+  const ans = parseInt(document.getElementById('captcha-input').value, 10);
+  if (isNaN(ans) || ans !== captchaAnswer) { recordLoginFail('คำตอบ CAPTCHA ผิด'); return; }
+
+  // ชั้น 3: Session rate limit — กันสแปมเบอร์ >10 เบอร์ใน 5 นาที
+  const sk = 'sp_' + shopId;
+  let sd = JSON.parse(sessionStorage.getItem(sk) || '{"n":0,"t":0}');
+  if (Date.now() - sd.t > 300000) sd = { n:0, t:Date.now() };
+  sd.n++;
+  sessionStorage.setItem(sk, JSON.stringify(sd));
+  if (sd.n > 10) { triggerLock(); showToast('🔒 ลองเบอร์บ่อยเกินไป', '#ef4444'); return; }
+
+  loginFailCount = 0; hideCaptcha();
+  setDeviceToken(phone);
+  loginDone(phone);
+}
+
+async function loginDone(phone) {
+  loginBusy = true;
+  const btn = document.getElementById('confirm-btn');
+  if (btn) { btn.style.opacity='.4'; btn.disabled=true; }
+  try {
+    userPhone = phone.length === 9 ? '0'+phone : phone;
+    localStorage.setItem('userPhone', userPhone);
+    document.getElementById('display-phone').textContent = formatPhone(userPhone);
+    phoneBuffer = ''; updatePhoneDisplay();
+    document.getElementById('login-err').classList.add('hidden');
+    showPage('card-page');
+    await loadCardData();
+  } finally {
+    loginBusy = false;
+    if (btn) { btn.style.opacity='1'; btn.disabled=false; }
+  }
 }
 
 // ── LOAD CARD ──
@@ -919,30 +1089,86 @@ function renderActionArea(canRequest, planType, currentPoints, maxPoints) {
   }
 }
 
-// ── REQUEST POINT (with cooldown) ──
+// ══════════════════════════════════════════════
+//  🛡️ ด่าน 1 — CLIENT COOLDOWN
+//  บันทึกเวลากดลง localStorage กัน double-tap
+//  แสดง countdown บนปุ่มแทนแค่ toast
+// ══════════════════════════════════════════════
+const CLIENT_COOLDOWN_MS = 30_000; // 30 วิ (ตรงกับ GAS COOLDOWN_SEC)
+let requesting = false;
+let cdTimer = null;
+
+function getLastRequestTime() {
+  return parseInt(localStorage.getItem(`lrt_${shopId}_${userPhone}`) || '0', 10);
+}
+function setLastRequestTime(ts) {
+  localStorage.setItem(`lrt_${shopId}_${userPhone}`, String(ts));
+}
+
+function startCooldownUI(remainMs) {
+  const btn = document.getElementById('request-btn');
+  if (!btn) return;
+  clearInterval(cdTimer);
+  let rem = Math.ceil(remainMs / 1000);
+  btn.disabled = true;
+  btn.style.opacity = '.6';
+  cdTimer = setInterval(() => {
+    rem--;
+    if (rem <= 0) {
+      clearInterval(cdTimer);
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = '✦ กดขอรับแสตมป์';
+      return;
+    }
+    btn.innerHTML = `⏱ รออีก ${rem} วิ`;
+  }, 1000);
+  btn.innerHTML = `⏱ รออีก ${rem} วิ`;
+}
+
+// ── REQUEST POINT ──
 async function requestPoint() {
   if (requesting) return;
+
+  // ด่าน 1: Client cooldown
   const now = Date.now();
-  if (now - lastRequestTime < REQUEST_COOLDOWN_MS) {
-    const sec = Math.ceil((REQUEST_COOLDOWN_MS - (now - lastRequestTime)) / 1000);
-    showToast(`⏱ กรุณารอ ${sec} วินาทีก่อนกดใหม่`, '#f59e0b'); return;
+  const last = getLastRequestTime();
+  const elapsed = now - last;
+  if (elapsed < CLIENT_COOLDOWN_MS) {
+    startCooldownUI(CLIENT_COOLDOWN_MS - elapsed);
+    showToast(`⏱ กรุณารอ ${Math.ceil((CLIENT_COOLDOWN_MS - elapsed)/1000)} วิก่อนกดใหม่`, '#f59e0b');
+    return;
   }
+
   requesting = true;
-  lastRequestTime = now;
+  setLastRequestTime(now);
   const btn = document.getElementById('request-btn');
-  if (btn) { btn.textContent = '⏳ กำลังส่ง...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = '⏳ กำลังส่ง...'; btn.disabled = true; }
+
   try {
     const data = await apiPost({ action:'request_point', shopId, phone:userPhone });
     if (!data.success) {
-      showToast(data.error === 'COOLDOWN' ? '⏱ กรุณารอสักครู่ก่อนกดใหม่' : '⚠️ ' + (data.message || data.error), '#f59e0b');
+      if (data.error === 'COOLDOWN' || data.error === 'RATE_LIMIT') {
+        // ด่าน 2 ตีกลับ → เริ่ม countdown UI
+        startCooldownUI(CLIENT_COOLDOWN_MS);
+        showToast('⏱ กรุณารอสักครู่', '#f59e0b');
+      } else if (data.error === 'BRUTE_LOCK') {
+        // ด่าน 3 ตีกลับ (เกิดได้ถ้า flow ผิดปกติ)
+        showToast('🔒 ' + (data.message || 'ถูกล็อกชั่วคราว'), '#ef4444');
+      } else {
+        showToast('⚠️ ' + (data.message || data.error), '#f59e0b');
+      }
     } else {
       showToast('✅ ส่งคำขอสำเร็จ รอพนักงานอนุมัติ', '#22c55e');
+      startCooldownUI(CLIENT_COOLDOWN_MS);
     }
   } catch(err) {
+    // ล้าง timestamp ถ้า network fail เพื่อให้กดได้อีก
+    localStorage.removeItem(`lrt_${shopId}_${userPhone}`);
     showToast('⚠️ ส่งคำขอไม่สำเร็จ: ' + err.message, '#ff6b6b');
+    if (btn) { btn.innerHTML = '✦ กดขอรับแสตมป์'; btn.disabled = false; }
   } finally {
     requesting = false;
-    if (btn) { btn.textContent = '✦ กดขอรับแสตมป์'; btn.disabled = false; }
   }
 }
 
