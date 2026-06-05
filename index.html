@@ -293,6 +293,38 @@
     }
     @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-sheet { animation: sheetUp .3s cubic-bezier(.34,1.56,.64,1); }
+
+    /* ── NICKNAME MODAL ── */
+    .nickname-input {
+      width: 100%; background: var(--surface); border: 2px solid var(--border);
+      border-radius: 14px; padding: 14px 16px; font-size: 1.1rem;
+      font-family: 'Prompt', sans-serif; font-weight: 600; color: var(--text);
+      text-align: center; outline: none; transition: border-color .2s;
+      -webkit-appearance: none;
+    }
+    .nickname-input:focus { border-color: var(--accent); }
+    .nickname-input.error { border-color: #ef4444 !important; }
+    .nickname-input::placeholder { color: var(--muted); font-weight: 400; }
+    .nickname-confirm-btn {
+      font-family: 'Prompt', sans-serif; font-weight: 700; font-size: 1rem;
+      background: var(--accent); color: #0f0f17; border: none; border-radius: 14px;
+      width: 100%; padding: 16px 0; cursor: pointer;
+      transition: opacity .15s, transform .1s; margin-top: 12px;
+    }
+    .nickname-confirm-btn:active { opacity: .85; transform: scale(.97); }
+    .nickname-confirm-btn:disabled { opacity: .4; cursor: default; }
+    .nickname-skip-btn {
+      font-family: 'Sarabun', sans-serif; font-size: .85rem;
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      width: 100%; padding: 10px 0; margin-top: 4px; text-decoration: underline;
+    }
+    .nickname-change-btn {
+      font-family: 'Sarabun', sans-serif; font-size: .75rem;
+      background: var(--faint); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--muted); cursor: pointer; padding: 4px 10px;
+      transition: background .15s;
+    }
+    .nickname-change-btn:active { background: var(--numpad-active); }
   </style>
 </head>
 <body>
@@ -555,6 +587,31 @@
   </div>
 </div>
 
+<!-- ══════════ NICKNAME MODAL ══════════ -->
+<div id="nickname-modal" class="hidden modal-backdrop">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:48px">
+    <div class="text-center mb-6">
+      <div class="text-4xl mb-3">✨</div>
+      <h3 class="heading font-bold text-xl mb-2" id="nickname-modal-title">ตั้งชื่อเล่นของคุณ</h3>
+      <p class="text-sm leading-relaxed" style="color:var(--muted)" id="nickname-modal-sub">
+        ชื่อนี้จะแสดงในอันดับแทนเบอร์โทร<br/>เพื่อความเป็นส่วนตัว
+      </p>
+    </div>
+    <div id="nickname-err" class="login-err hidden mb-3"></div>
+    <input id="nickname-input" class="nickname-input mb-1" type="text"
+      maxlength="20" placeholder="เช่น มะม่วง, Sunny, นักสะสมจ้าวเวหา..."
+      autocomplete="off" autocorrect="off" spellcheck="false"
+      oninput="onNicknameInput()" />
+    <p class="text-xs text-center mt-2 mb-1" style="color:var(--muted)" id="nickname-char-count">0 / 20</p>
+    <button class="nickname-confirm-btn" id="nickname-confirm-btn" onclick="confirmNickname()" disabled>
+      ✓ ยืนยันชื่อเล่น
+    </button>
+    <button class="nickname-skip-btn" id="nickname-skip-btn" onclick="skipNickname()">
+      ข้ามไปก่อน (แสดงเป็นเบอร์โทร)
+    </button>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════
 //  CONFIG — เปลี่ยน URL นี้เป็น GAS Web App URL
@@ -569,9 +626,9 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycby-5p7TDLgkMw8UIfs5DAjf
 let shopId = null, userPhone = null, phoneBuffer = '', shopData = null;
 // ★ ข้อมูลติดต่อ — แก้เป็นของร้าน
 const CONTACT = {
-  facebook: 'https://www.facebook.com/share/1HNbfjKjnY/',
-  line:     'https://line.me/ti/p/kLxd_dZ-XH',
-  gmail:    'mailto:smartqueueservice24@gmail.com?subject=สอบถามข้อมูลระบบ StampX',
+  facebook: 'https://facebook.com/ZER0Game',
+  line:     'https://line.me/ti/p/YOUR_LINE_ID',
+  gmail:    'mailto:your@email.com',
 };
 
 let historyLoaded = false, rankLoaded = false;
@@ -608,7 +665,7 @@ function init() {
   if (!userPhone) { showPage('login-page'); }
   else {
     showPage('card-page');
-    document.getElementById('display-phone').textContent = formatPhone(userPhone);
+    updateTopBarName();
     loadCardData();
   }
 }
@@ -762,6 +819,117 @@ function updatePhoneDisplay() {
   el.style.color = phoneBuffer.length > 0 ? 'var(--text)' : 'var(--muted)';
   document.querySelectorAll('.phone-dots span').forEach((d,i) => d.classList.toggle('filled', i < phoneBuffer.length));
 }
+// ══════════════════════════════════════════════
+//  NICKNAME — ชื่อเล่นแทนเบอร์ในที่สาธารณะ
+//  - ตั้งครั้งแรกตอน login เบอร์ใหม่
+//  - เปลี่ยนได้ทุก 14 วัน
+//  - เก็บ localStorage: nickname_{phone}, nickname_ts_{phone}
+// ══════════════════════════════════════════════
+const NICKNAME_COOLDOWN_DAYS = 14;
+const NICKNAME_MAX_LEN       = 20;
+
+function getNickname(phone) {
+  return localStorage.getItem('nickname_' + phone) || '';
+}
+function getNicknameTs(phone) {
+  return parseInt(localStorage.getItem('nickname_ts_' + phone) || '0', 10);
+}
+function setNickname(phone, name) {
+  localStorage.setItem('nickname_' + phone, name.trim());
+  localStorage.setItem('nickname_ts_' + phone, Date.now().toString());
+}
+function canChangeNickname(phone) {
+  const ts = getNicknameTs(phone);
+  if (!ts) return true;
+  return (Date.now() - ts) / (1000 * 60 * 60 * 24) >= NICKNAME_COOLDOWN_DAYS;
+}
+function daysUntilNextChange(phone) {
+  const ts = getNicknameTs(phone);
+  if (!ts) return 0;
+  return Math.max(0, Math.ceil(NICKNAME_COOLDOWN_DAYS - (Date.now() - ts) / (1000 * 60 * 60 * 24)));
+}
+function getDisplayName(phone) {
+  const nick = getNickname(phone);
+  return nick || formatPhone(phone.replace(/\D/g,''));
+}
+
+function openNicknameModal(isNew) {
+  const modal = document.getElementById('nickname-modal');
+  const title = document.getElementById('nickname-modal-title');
+  const sub   = document.getElementById('nickname-modal-sub');
+  const skip  = document.getElementById('nickname-skip-btn');
+  const inp   = document.getElementById('nickname-input');
+  const err   = document.getElementById('nickname-err');
+  inp.value = getNickname(userPhone) || '';
+  onNicknameInput();
+  err.classList.add('hidden');
+  inp.classList.remove('error');
+  if (isNew) {
+    title.textContent = 'ตั้งชื่อเล่นของคุณ';
+    sub.innerHTML = 'ชื่อนี้จะแสดงในอันดับแทนเบอร์โทร<br/>เพื่อความเป็นส่วนตัว';
+    skip.classList.remove('hidden');
+  } else {
+    title.textContent = 'เปลี่ยนชื่อเล่น';
+    sub.innerHTML = 'ชื่อใหม่จะแสดงในอันดับแทนเบอร์โทร<br/>เปลี่ยนได้ทุก ' + NICKNAME_COOLDOWN_DAYS + ' วัน';
+    skip.classList.add('hidden');
+  }
+  modal.classList.remove('hidden');
+  setTimeout(() => inp.focus(), 350);
+}
+
+function closeNicknameModal() {
+  document.getElementById('nickname-modal').classList.add('hidden');
+}
+
+function onNicknameInput() {
+  const val = document.getElementById('nickname-input').value;
+  const trimmed = val.trim();
+  document.getElementById('nickname-char-count').textContent = trimmed.length + ' / ' + NICKNAME_MAX_LEN;
+  document.getElementById('nickname-confirm-btn').disabled = trimmed.length < 1;
+  document.getElementById('nickname-input').classList.remove('error');
+}
+
+function confirmNickname() {
+  const val = document.getElementById('nickname-input').value.trim();
+  if (!val) return;
+  const safe = val.replace(/[<>&"']/g, '');
+  if (safe.length < 1) {
+    document.getElementById('nickname-err').textContent = 'ชื่อไม่ถูกต้อง กรุณาลองใหม่';
+    document.getElementById('nickname-err').classList.remove('hidden');
+    document.getElementById('nickname-input').classList.add('error');
+    return;
+  }
+  setNickname(userPhone, safe);
+  closeNicknameModal();
+  updateTopBarName();
+  if (rankLoaded) renderLeaderboard();
+  showToast('✅ บันทึกชื่อเล่น "' + safe + '" แล้ว', '#22c55e');
+}
+
+function skipNickname() {
+  closeNicknameModal();
+}
+
+function updateTopBarName() {
+  const displayEl = document.getElementById('display-phone');
+  if (!displayEl || !userPhone) return;
+  const nick = getNickname(userPhone);
+  const fmt  = formatPhone(userPhone.replace(/\D/g,''));
+  if (nick) {
+    displayEl.innerHTML = nick + ' <button class="nickname-change-btn" onclick="tryChangeNickname()" style="vertical-align:middle;margin-left:4px">✏️</button>';
+  } else {
+    displayEl.innerHTML = fmt + ' <button class="nickname-change-btn" onclick="tryChangeNickname()" style="vertical-align:middle;margin-left:4px">ตั้งชื่อ</button>';
+  }
+}
+
+function tryChangeNickname() {
+  if (!canChangeNickname(userPhone)) {
+    showToast('⏳ เปลี่ยนชื่อได้อีก ' + daysUntilNextChange(userPhone) + ' วัน', '#f59e0b');
+    return;
+  }
+  openNicknameModal(false);
+}
+
 // ══════════════════════════════════════════════════════════
 //  ANTI-SPAM LOGIN — 3 ชั้น
 //  ชั้น 1: Device Token — เครื่องเดิม/เบอร์เดิม ผ่านเลย
@@ -880,12 +1048,18 @@ async function loginDone(phone) {
   if (btn) { btn.style.opacity='.4'; btn.disabled=true; }
   try {
     userPhone = phone.length === 9 ? '0'+phone : phone;
+    const isNewPhone = !getNicknameTs(userPhone); // ไม่เคย login เบอร์นี้มาก่อน
     localStorage.setItem('userPhone', userPhone);
     document.getElementById('display-phone').textContent = formatPhone(userPhone);
     phoneBuffer = ''; updatePhoneDisplay();
     document.getElementById('login-err').classList.add('hidden');
     showPage('card-page');
+    updateTopBarName(); // อัพเดต top bar ด้วยชื่อเล่น (ถ้ามี)
     await loadCardData();
+    // ถ้าเบอร์ใหม่และยังไม่มีชื่อ → เปิด modal ตั้งชื่อ
+    if (isNewPhone) {
+      setTimeout(() => openNicknameModal(true), 600);
+    }
   } finally {
     loginBusy = false;
     if (btn) { btn.style.opacity='1'; btn.disabled=false; }
@@ -1431,7 +1605,7 @@ function renderLeaderboard() {
     const isMe = c.phone === myNrm;
     if (isMe) myRank = i + 1;
     const display = isMe
-      ? `<span style="color:var(--accent);font-weight:800">${formatPhone(myNrm)}</span> <span style="font-size:.75rem;opacity:.7">(${currentLang==='th'?'คุณ':'You'})</span>`
+      ? `<span style="color:var(--accent);font-weight:800">${getDisplayName(myNrm)}</span> <span style="font-size:.75rem;opacity:.7">(${currentLang==='th'?'คุณ':'You'})</span>`
       : `<span>${censorPhone(c.phone)}</span>`;
     const medal = i < 3
       ? `<span class="text-xl w-8 text-center">${medals[i]}</span>`
@@ -1450,7 +1624,7 @@ function renderLeaderboard() {
     <div class="lb-row is-me" style="border-top:2px dashed rgba(245,200,66,.2);margin-top:4px">
       <span class="w-8 text-center font-mono text-sm" style="color:var(--muted)">…</span>
       <span class="font-mono text-sm flex-1">
-        <span style="color:var(--accent);font-weight:800">${formatPhone(myNrm)}</span>
+        <span style="color:var(--accent);font-weight:800">${getDisplayName(myNrm)}</span>
         <span style="font-size:.75rem;opacity:.7"> (${currentLang==='th'?'คุณ':'You'})</span>
       </span>
       <span class="font-mono font-bold text-base" style="color:var(--accent)">${myDisplayPts}</span>
