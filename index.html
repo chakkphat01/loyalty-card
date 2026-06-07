@@ -821,38 +821,49 @@ function updatePhoneDisplay() {
 }
 // ══════════════════════════════════════════════
 //  NICKNAME — ชื่อเล่นแทนเบอร์ในที่สาธารณะ
-//  - ตั้งครั้งแรกตอน login เบอร์ใหม่
-//  - เปลี่ยนได้ทุก 14 วัน
-//  - เก็บ localStorage: nickname_{phone}, nickname_ts_{phone}
+//  - เก็บใน Google Sheet (server) เป็น source of truth
+//  - cache ใน localStorage เพื่อ UX เร็ว
+//  - เปลี่ยนได้ทุก 14 วัน (ตรวจสอบ server)
+//  - ตั้งครั้งแรกเมื่อ login เบอร์ใหม่
 // ══════════════════════════════════════════════
 const NICKNAME_COOLDOWN_DAYS = 14;
-const NICKNAME_MAX_LEN       = 20;
 
-function getNickname(phone) {
-  return localStorage.getItem('nickname_' + phone) || '';
+// cache key ใน localStorage
+function _nkCacheKey(phone) { return 'nk_' + phone.replace(/\D/g,''); }
+function _nkTsKey(phone)    { return 'nk_ts_' + phone.replace(/\D/g,''); }
+
+/** อ่าน nickname จาก cache (ใช้ก่อน server ตอบ) */
+function getCachedNickname(phone) {
+  return localStorage.getItem(_nkCacheKey(phone)) || '';
 }
-function getNicknameTs(phone) {
-  return parseInt(localStorage.getItem('nickname_ts_' + phone) || '0', 10);
+/** เขียน cache หลัง server ยืนยัน */
+function setCachedNickname(phone, name, tsMs) {
+  localStorage.setItem(_nkCacheKey(phone), name || '');
+  localStorage.setItem(_nkTsKey(phone), String(tsMs || 0));
 }
-function setNickname(phone, name) {
-  localStorage.setItem('nickname_' + phone, name.trim());
-  localStorage.setItem('nickname_ts_' + phone, Date.now().toString());
+/** timestamp ล่าสุดที่เปลี่ยนชื่อ (จาก cache) */
+function getCachedNicknameTs(phone) {
+  return parseInt(localStorage.getItem(_nkTsKey(phone)) || '0', 10);
 }
-function canChangeNickname(phone) {
-  const ts = getNicknameTs(phone);
-  if (!ts) return true;
-  return (Date.now() - ts) / (1000 * 60 * 60 * 24) >= NICKNAME_COOLDOWN_DAYS;
-}
-function daysUntilNextChange(phone) {
-  const ts = getNicknameTs(phone);
-  if (!ts) return 0;
-  return Math.max(0, Math.ceil(NICKNAME_COOLDOWN_DAYS - (Date.now() - ts) / (1000 * 60 * 60 * 24)));
-}
+
+/** ชื่อที่แสดงในหน้าจอ: ชื่อเล่น หรือ เบอร์ format ถ้าไม่มี */
 function getDisplayName(phone) {
-  const nick = getNickname(phone);
+  const nick = getCachedNickname(phone);
   return nick || formatPhone(phone.replace(/\D/g,''));
 }
 
+/** โหลด nickname จาก server แล้ว sync cache */
+function syncNicknameFromServer(data) {
+  // data = customer object จาก checkPoints response
+  const nick = data.nickname || '';
+  const ts   = data.nicknameUpdatedAt || 0;
+  setCachedNickname(userPhone, nick, ts);
+}
+
+/** เปิด modal ตั้งชื่อเล่น
+ *  isNew = true → ครั้งแรก (มีปุ่มข้าม)
+ *  isNew = false → เปลี่ยนชื่อ
+ */
 function openNicknameModal(isNew) {
   const modal = document.getElementById('nickname-modal');
   const title = document.getElementById('nickname-modal-title');
@@ -860,7 +871,7 @@ function openNicknameModal(isNew) {
   const skip  = document.getElementById('nickname-skip-btn');
   const inp   = document.getElementById('nickname-input');
   const err   = document.getElementById('nickname-err');
-  inp.value = getNickname(userPhone) || '';
+  inp.value = getCachedNickname(userPhone) || '';
   onNicknameInput();
   err.classList.add('hidden');
   inp.classList.remove('error');
@@ -884,48 +895,73 @@ function closeNicknameModal() {
 function onNicknameInput() {
   const val = document.getElementById('nickname-input').value;
   const trimmed = val.trim();
-  document.getElementById('nickname-char-count').textContent = trimmed.length + ' / ' + NICKNAME_MAX_LEN;
+  document.getElementById('nickname-char-count').textContent = trimmed.length + ' / 20';
   document.getElementById('nickname-confirm-btn').disabled = trimmed.length < 1;
   document.getElementById('nickname-input').classList.remove('error');
+  document.getElementById('nickname-err').classList.add('hidden');
 }
 
-function confirmNickname() {
-  const val = document.getElementById('nickname-input').value.trim();
+/** กด "ยืนยัน" ใน modal → ส่ง API */
+async function confirmNickname() {
+  const val  = document.getElementById('nickname-input').value.trim();
   if (!val) return;
-  const safe = val.replace(/[<>&"']/g, '');
-  if (safe.length < 1) {
-    document.getElementById('nickname-err').textContent = 'ชื่อไม่ถูกต้อง กรุณาลองใหม่';
-    document.getElementById('nickname-err').classList.remove('hidden');
-    document.getElementById('nickname-input').classList.add('error');
+  const safe = val.replace(/[<>&"']/g, '').slice(0, 20);
+  if (!safe) {
+    showNicknameErr('ชื่อไม่ถูกต้อง กรุณาลองใหม่');
     return;
   }
-  setNickname(userPhone, safe);
-  closeNicknameModal();
-  updateTopBarName();
-  if (rankLoaded) renderLeaderboard();
-  showToast('✅ บันทึกชื่อเล่น "' + safe + '" แล้ว', '#22c55e');
+  const btn = document.getElementById('nickname-confirm-btn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+  try {
+    const res = await apiPost({ action:'set_nickname', phone:userPhone, nickname:safe });
+    if (res.success) {
+      setCachedNickname(userPhone, res.nickname, res.updatedAt);
+      closeNicknameModal();
+      updateTopBarName();
+      if (rankLoaded) renderLeaderboard();
+      showToast('✅ บันทึกชื่อเล่น "' + res.nickname + '" แล้ว', '#22c55e');
+    } else if (res.error === 'COOLDOWN') {
+      showNicknameErr('⏳ เปลี่ยนชื่อได้อีก ' + (res.daysLeft||NICKNAME_COOLDOWN_DAYS) + ' วัน');
+    } else {
+      showNicknameErr(res.error || 'บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    }
+  } catch(e) {
+    showNicknameErr('เชื่อมต่อไม่ได้ กรุณาลองใหม่');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ ยืนยันชื่อเล่น';
+  }
+}
+
+function showNicknameErr(msg) {
+  const err = document.getElementById('nickname-err');
+  err.textContent = msg; err.classList.remove('hidden');
+  document.getElementById('nickname-input').classList.add('error');
 }
 
 function skipNickname() {
   closeNicknameModal();
 }
 
+/** อัพเดต top bar: ชื่อเล่น + ปุ่มเปลี่ยน */
 function updateTopBarName() {
   const displayEl = document.getElementById('display-phone');
   if (!displayEl || !userPhone) return;
-  const nick = getNickname(userPhone);
+  const nick = getCachedNickname(userPhone);
   const fmt  = formatPhone(userPhone.replace(/\D/g,''));
-  if (nick) {
-    displayEl.innerHTML = nick + ' <button class="nickname-change-btn" onclick="tryChangeNickname()" style="vertical-align:middle;margin-left:4px">✏️</button>';
-  } else {
-    displayEl.innerHTML = fmt + ' <button class="nickname-change-btn" onclick="tryChangeNickname()" style="vertical-align:middle;margin-left:4px">ตั้งชื่อ</button>';
-  }
+  const changeBtn = `<button class="nickname-change-btn" onclick="tryChangeNickname()" style="vertical-align:middle;margin-left:6px">${nick ? '✏️' : 'ตั้งชื่อ'}</button>`;
+  displayEl.innerHTML = (nick || fmt) + changeBtn;
 }
 
+/** กดปุ่ม ✏️ เปลี่ยนชื่อ — ตรวจ cooldown จาก cache ก่อน (server จะยืนยันอีกครั้ง) */
 function tryChangeNickname() {
-  if (!canChangeNickname(userPhone)) {
-    showToast('⏳ เปลี่ยนชื่อได้อีก ' + daysUntilNextChange(userPhone) + ' วัน', '#f59e0b');
-    return;
+  const ts = getCachedNicknameTs(userPhone);
+  if (ts) {
+    const daysPassed = (Date.now() - ts) / (1000 * 60 * 60 * 24);
+    if (daysPassed < NICKNAME_COOLDOWN_DAYS) {
+      const left = Math.ceil(NICKNAME_COOLDOWN_DAYS - daysPassed);
+      showToast('⏳ เปลี่ยนชื่อได้อีก ' + left + ' วัน', '#f59e0b');
+      return;
+    }
   }
   openNicknameModal(false);
 }
@@ -1048,18 +1084,15 @@ async function loginDone(phone) {
   if (btn) { btn.style.opacity='.4'; btn.disabled=true; }
   try {
     userPhone = phone.length === 9 ? '0'+phone : phone;
-    const isNewPhone = !getNicknameTs(userPhone); // ไม่เคย login เบอร์นี้มาก่อน
     localStorage.setItem('userPhone', userPhone);
-    document.getElementById('display-phone').textContent = formatPhone(userPhone);
     phoneBuffer = ''; updatePhoneDisplay();
     document.getElementById('login-err').classList.add('hidden');
     showPage('card-page');
-    updateTopBarName(); // อัพเดต top bar ด้วยชื่อเล่น (ถ้ามี)
+    updateTopBarName();
     await loadCardData();
-    // ถ้าเบอร์ใหม่และยังไม่มีชื่อ → เปิด modal ตั้งชื่อ
-    if (isNewPhone) {
-      setTimeout(() => openNicknameModal(true), 600);
-    }
+    // isNewPhone = ไม่เคยมีชื่อเล่นบันทึกไว้เลย (cache ว่าง + server ก็ยังไม่มี)
+    const isNewPhone = !getCachedNickname(userPhone);
+    if (isNewPhone) setTimeout(() => openNicknameModal(true), 700);
   } finally {
     loginBusy = false;
     if (btn) { btn.style.opacity='1'; btn.disabled=false; }
@@ -1071,6 +1104,9 @@ async function loadCardData() {
   try {
     const data = await apiPost({ action:'check_points', shopId, phone:userPhone });
     if (!data.success) throw new Error(data.error || 'โหลดข้อมูลไม่สำเร็จ');
+    // sync nickname จาก server → cache → UI
+    syncNicknameFromServer(data.customer);
+    updateTopBarName();
     renderCard(data);
     loadStreak(); // ★ ไม่ await — รันพาราเลล ไม่บล็อก UI
   } catch(err) {
