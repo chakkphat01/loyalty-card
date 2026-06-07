@@ -485,7 +485,7 @@
   <!-- Pane: customers -->
   <div id="ml-pane-customers" class="hidden">
     <div class="flex gap-3 mb-4">
-      <input class="search-box flex-1" id="ml-search" type="tel" placeholder="🔍 ค้นหาเบอร์โทร..." oninput="filterCustomers('ml')">
+      <input class="search-box flex-1" id="ml-search" type="search" placeholder="🔍 ค้นหาเบอร์ หรือชื่อเล่น..." oninput="filterCustomers('ml')">
     </div>
     <!-- Stats row -->
     <div id="ml-stats" class="grid grid-cols-3 gap-3 mb-5 hidden">
@@ -564,6 +564,29 @@ let custLoaded=false;
 let suspendedMode = false;
 
 // ════════════════════════════════════════════════
+//  PROFANITY FILTER (client-side preview)
+// ════════════════════════════════════════════════
+const PROFANITY_LIST = [
+  'เหี้ย','สัตว์','ควาย','หมา','ไอ้สัตว์','ไอ้หมา','ไอ้เหี้ย','อีสัตว์','อีหมา','อีเหี้ย',
+  'สาด','ระยำ','ชาติหมา','มึง','กู','อีดอก','ไอ้ดอก','อีสาด','เย็ด','เยี่ยว',
+  'fuck','shit','bitch','asshole','dick','cock','pussy','cunt','bastard','slut','whore','nigger','fag','retard'
+];
+function hasProfanity(text) {
+  const lower = (text||'').toLowerCase().replace(/\s/g,'');
+  return PROFANITY_LIST.some(w => lower.includes(w.toLowerCase()));
+}
+
+/** แสดงชื่อลูกค้าในร้าน: ชื่อเล่น (ถ้ามี) + เบอร์ censored */
+function custDisplayName(c) {
+  const phone = censorPhone(c.phone);
+  if (c.nickname) return `<span class="font-bold" style="color:var(--text)">${escHtml(c.nickname)}</span> <span style="color:var(--muted);font-size:.78rem">(${phone})</span>`;
+  return `<span style="font-family:'IBM Plex Mono',monospace">${phone}</span>`;
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════
 //  LANG SYSTEM
 // ════════════════════════════════════════════════
 let currentLang = localStorage.getItem('stampx_lang') || 'th';
@@ -575,9 +598,9 @@ const SHOP_LABELS = {
 
 // ★ ข้อมูลติดต่อระบบ StampX — แก้เป็นของคุณ
 const SYSTEM_CONTACT = {
-  facebook: 'https://www.facebook.com/share/1HNbfjKjnY/',
+  facebook: 'https://www.facebook.com/chakkaphat.sawangnet/about/?fb_profile_edit_entry_point=%7B%22click_point%22%3A%22edit_profile_button%22%2C%22feature%22%3A%22profile_header%22%7D&id=100039338199448&sk=about',
   line:     'https://line.me/ti/p/kLxd_dZ-XH',
-  gmail:    'mailto:smartqueueservice24@gmail.com?subject=สอบถามข้อมูลระบบ StampX',
+  gmail:    'mailto:tatatata2039960@gmail.com?subject=สอบถามข้อมูลระบบ StampX',
 };
 
 function toggleLang() {
@@ -841,13 +864,18 @@ function renderShopRank(prefix) {
     const badge   = isFull
       ? `<span class="text-xs font-semibold" style="color:var(--green)">✅ ครบ</span>`
       : `<span class="text-xs" style="color:var(--muted)">${c.currentPoints}/${maxPts}</span>`;
+    // แสดงชื่อเล่น (ถ้ามี) และเบอร์ censored
+    const nameHtml = c.nickname
+      ? `<div style="font-weight:700;font-size:.9rem;color:var(--text)">${escHtml(c.nickname)}</div>
+         <div style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted)">${censorPhone(c.phone)}</div>`
+      : `<div style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600">${censorPhone(c.phone)}</div>`;
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:center;min-width:28px">${medal}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600">${censorPhone(c.phone)}</span>
-            ${badge}
+            <div style="min-width:0;flex:1">${nameHtml}</div>
+            <div style="flex-shrink:0;margin-left:8px">${badge}</div>
           </div>
           <div style="background:var(--faint);border-radius:99px;height:5px;overflow:hidden">
             <div style="background:${barColor};height:100%;width:${pct}%;border-radius:99px;transition:width .5s ease"></div>
@@ -885,6 +913,10 @@ function renderShopRank(prefix) {
     <button onclick="custLoaded=false;renderShopRank('${prefix}')"
       style="width:100%;margin-top:14px;padding:12px;border-radius:14px;border:1.5px solid var(--border);background:var(--faint);font-family:'IBM Plex Sans Thai',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;color:var(--muted)">
       🔄 รีเฟรชอันดับ
+    </button>
+    <button onclick="openCooldownModal()"
+      style="width:100%;margin-top:8px;padding:11px;border-radius:14px;border:1.5px solid var(--border);background:var(--faint);font-family:'IBM Plex Sans Thai',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;color:var(--muted)">
+      ⏱️ ตั้งเวลาเปลี่ยนชื่อ (ปัจจุบัน: <span id="cooldown-display">14</span> วัน)
     </button>
   `;
 }
@@ -946,8 +978,13 @@ async function loadCustomers(prefix) {
 }
 
 function filterCustomers(prefix) {
-  const q = document.getElementById(`${prefix}-search`).value.trim();
-  const filtered = q ? customersCache.filter(c => c.phone.includes(q)) : customersCache;
+  const q = document.getElementById(`${prefix}-search`).value.trim().toLowerCase();
+  const filtered = q
+    ? customersCache.filter(c =>
+        c.phone.includes(q) ||
+        (c.nickname && c.nickname.toLowerCase().includes(q))
+      )
+    : customersCache;
   renderCustomers(prefix, filtered);
 }
 
@@ -964,8 +1001,8 @@ function renderCustomers(prefix, list) {
     div.className = 'cust-row';
     div.innerHTML = `
       <div class="flex items-center justify-between">
-        <div>
-          <p class="font-bold text-sm" style="font-family:'IBM Plex Mono',monospace">${censorPhone(c.phone)}</p>
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:700;font-size:.9rem">${custDisplayName(c)}</div>
           <p class="text-xs mt-0.5" style="color:var(--muted)">ล่าสุด: ${c.lastVisit||'—'} · มา ${c.totalVisits||0} ครั้ง</p>
         </div>
         <div class="text-right flex-shrink-0 ml-3">
@@ -984,7 +1021,12 @@ function renderCustomers(prefix, list) {
 }
 
 function showCustDetail(c) {
-  document.getElementById('cust-modal-phone').textContent = censorPhone(c.phone);
+  const modalPhone = document.getElementById('cust-modal-phone');
+  if (c.nickname) {
+    modalPhone.innerHTML = `${escHtml(c.nickname)} <span style="font-size:.75rem;font-weight:400;color:var(--muted)">(${censorPhone(c.phone)})</span>`;
+  } else {
+    modalPhone.textContent = censorPhone(c.phone);
+  }
   const maxPts = c.maxPoints || 10;
   const pct = Math.min(100, Math.round((c.currentPoints/maxPts)*100));
   const rows = (c.logs || []).map(l=>
@@ -1265,6 +1307,64 @@ function apiPost(body) {
   });
 }
 
+<!-- ══════════ NICKNAME COOLDOWN MODAL ══════════ -->
+<div id="cooldown-modal" class="hidden modal-backdrop" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:40px">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <p class="section-label">ตั้งค่าระบบ</p>
+        <h3 class="font-bold text-lg">⏱️ เวลาเปลี่ยนชื่อเล่น</h3>
+      </div>
+      <button onclick="document.getElementById('cooldown-modal').classList.add('hidden')" class="theme-btn">✕</button>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--muted)">ลูกค้าจะเปลี่ยนชื่อเล่นได้อีกครั้งหลังจากกี่วัน (0 = เปลี่ยนได้ตลอด)</p>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+      <input id="cooldown-days-input" type="number" min="0" max="365" value="14"
+        style="flex:1;font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:700;text-align:center;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--ink);outline:none"
+        oninput="this.value=Math.max(0,Math.min(365,parseInt(this.value)||0))">
+      <span style="color:var(--muted);font-size:.9rem">วัน</span>
+    </div>
+    <div style="display:flex;gap-8px;gap:8px">
+      <button onclick="saveCooldown()"
+        style="flex:1;font-family:'IBM Plex Sans Thai',sans-serif;font-weight:700;font-size:1rem;background:var(--green);color:#fff;border:none;border-radius:14px;padding:15px 0;cursor:pointer">
+        💾 บันทึก
+      </button>
+      <button onclick="document.getElementById('cooldown-modal').classList.add('hidden')"
+        style="font-family:'IBM Plex Sans Thai',sans-serif;font-weight:600;font-size:.9rem;background:var(--faint);border:1.5px solid var(--border);border-radius:14px;padding:15px 20px;cursor:pointer;color:var(--muted)">
+        ยกเลิก
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentCooldownDays = 14;
+
+function openCooldownModal() {
+  document.getElementById('cooldown-days-input').value = currentCooldownDays;
+  document.getElementById('cooldown-modal').classList.remove('hidden');
+}
+
+async function saveCooldown() {
+  const days = parseInt(document.getElementById('cooldown-days-input').value, 10);
+  if (isNaN(days) || days < 0 || days > 365) { showToast('⚠️ ค่าต้องอยู่ระหว่าง 0-365 วัน','#d97706'); return; }
+  const btn = document.querySelector('#cooldown-modal .flex button');
+  try {
+    const r = await apiPost({ action:'set_nickname_cooldown', shopId, password, days });
+    if (!r.success) throw new Error(r.error);
+    currentCooldownDays = days;
+    // อัพเดต display ในปุ่มอันดับ
+    const display = document.getElementById('cooldown-display');
+    if (display) display.textContent = days;
+    document.getElementById('cooldown-modal').classList.add('hidden');
+    showToast(`✅ ตั้งเวลาเปลี่ยนชื่อเป็น ${days} วันแล้ว`, '#16a34a');
+  } catch(e) {
+    showToast('❌ ' + (e.message||'บันทึกไม่สำเร็จ'), '#dc2626');
+  }
+}
+</script>
+
+<script>
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
