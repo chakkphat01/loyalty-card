@@ -1307,6 +1307,33 @@ function apiPost(body) {
   });
 }
 
+// ── COOLDOWN MODAL ──
+let currentCooldownDays = 14;
+
+function openCooldownModal() {
+  document.getElementById('cooldown-days-input').value = currentCooldownDays;
+  document.getElementById('cooldown-modal').classList.remove('hidden');
+}
+
+async function saveCooldown() {
+  const days = parseInt(document.getElementById('cooldown-days-input').value, 10);
+  if (isNaN(days) || days < 0 || days > 365) { showToast('⚠️ ค่าต้องอยู่ระหว่าง 0-365 วัน','#d97706'); return; }
+  try {
+    const r = await apiPost({ action:'set_nickname_cooldown', shopId, password, days });
+    if (!r.success) throw new Error(r.error);
+    currentCooldownDays = days;
+    const display = document.getElementById('cooldown-display');
+    if (display) display.textContent = days;
+    document.getElementById('cooldown-modal').classList.add('hidden');
+    showToast(`✅ ตั้งเวลาเปลี่ยนชื่อเป็น ${days} วันแล้ว`, '#16a34a');
+  } catch(e) {
+    showToast('❌ ' + (e.message||'บันทึกไม่สำเร็จ'), '#dc2626');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
 <!-- ══════════ NICKNAME COOLDOWN MODAL ══════════ -->
 <div id="cooldown-modal" class="hidden modal-backdrop" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:40px">
@@ -1324,7 +1351,7 @@ function apiPost(body) {
         oninput="this.value=Math.max(0,Math.min(365,parseInt(this.value)||0))">
       <span style="color:var(--muted);font-size:.9rem">วัน</span>
     </div>
-    <div style="display:flex;gap-8px;gap:8px">
+    <div style="display:flex;gap:8px">
       <button onclick="saveCooldown()"
         style="flex:1;font-family:'IBM Plex Sans Thai',sans-serif;font-weight:700;font-size:1rem;background:var(--green);color:#fff;border:none;border-radius:14px;padding:15px 0;cursor:pointer">
         💾 บันทึก
@@ -1337,35 +1364,5 @@ function apiPost(body) {
   </div>
 </div>
 
-<script>
-let currentCooldownDays = 14;
-
-function openCooldownModal() {
-  document.getElementById('cooldown-days-input').value = currentCooldownDays;
-  document.getElementById('cooldown-modal').classList.remove('hidden');
-}
-
-async function saveCooldown() {
-  const days = parseInt(document.getElementById('cooldown-days-input').value, 10);
-  if (isNaN(days) || days < 0 || days > 365) { showToast('⚠️ ค่าต้องอยู่ระหว่าง 0-365 วัน','#d97706'); return; }
-  const btn = document.querySelector('#cooldown-modal .flex button');
-  try {
-    const r = await apiPost({ action:'set_nickname_cooldown', shopId, password, days });
-    if (!r.success) throw new Error(r.error);
-    currentCooldownDays = days;
-    // อัพเดต display ในปุ่มอันดับ
-    const display = document.getElementById('cooldown-display');
-    if (display) display.textContent = days;
-    document.getElementById('cooldown-modal').classList.add('hidden');
-    showToast(`✅ ตั้งเวลาเปลี่ยนชื่อเป็น ${days} วันแล้ว`, '#16a34a');
-  } catch(e) {
-    showToast('❌ ' + (e.message||'บันทึกไม่สำเร็จ'), '#dc2626');
-  }
-}
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', init);
-</script>
 </body>
 </html>
