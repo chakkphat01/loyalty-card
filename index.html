@@ -1640,9 +1640,12 @@ function renderLeaderboard() {
   const rows = (data.topCusts || []).map((c, i) => {
     const isMe = c.phone === myNrm;
     if (isMe) myRank = i + 1;
+    // ทุกคนที่มีชื่อเล่น → แสดงชื่อเล่น ถ้าไม่มี → censor เบอร์
+    const nick = (isMe ? getCachedNickname(myNrm) : null) || c.nickname || '';
+    const nameStr = nick || censorPhone(c.phone);
     const display = isMe
-      ? `<span style="color:var(--accent);font-weight:800">${getDisplayName(myNrm)}</span> <span style="font-size:.75rem;opacity:.7">(${currentLang==='th'?'คุณ':'You'})</span>`
-      : `<span>${censorPhone(c.phone)}</span>`;
+      ? `<span style="color:var(--accent);font-weight:800">${nameStr}</span> <span style="font-size:.75rem;opacity:.7">(${currentLang==='th'?'คุณ':'You'})</span>`
+      : `<span style="font-weight:${nick?'700':'400'}">${nameStr}</span>`;
     const medal = i < 3
       ? `<span class="text-xl w-8 text-center">${medals[i]}</span>`
       : `<span class="w-8 text-center font-mono text-sm" style="color:var(--muted)">${i+1}</span>`;
