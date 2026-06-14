@@ -382,7 +382,7 @@
     </div>
     <div class="fade-up d4">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+        <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนดวง</span>
         <div class="qty-picker">
           <button class="qty-btn" onclick="sQtyChange(-1)">−</button>
           <span class="qty-val" id="s-qty-val">1</span>
@@ -474,7 +474,7 @@
             <button class="np-btn del" onclick="mlNumClear()" style="font-size:.85rem;">ล้าง</button>
           </div>
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+            <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนดวง</span>
             <div class="qty-picker">
               <button class="qty-btn" onclick="mlQtyChange(-1)">−</button>
               <span class="qty-val" id="ml-qty-val">1</span>
@@ -1182,7 +1182,7 @@ function buildQueueCard(item) {
   const ts=item.timestamp?new Date(item.timestamp):null;
   const timeStr=ts?ts.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
   const dotColor = isRedeem ? '#a855f7' : 'var(--green)';
-  const label    = isRedeem ? '🎁 ขอแลกรางวัล' : `⭐ ขอแสตมป์ ${qty > 1 ? `<span style="background:var(--amber);color:#0f0f17;font-weight:800;border-radius:6px;padding:1px 7px;font-size:.8rem">${qty} แก้ว</span>` : ''}`;
+  const label    = isRedeem ? '🎁 ขอแลกรางวัล' : `⭐ ขอแสตมป์ ${qty > 1 ? `<span style="background:var(--amber);color:#0f0f17;font-weight:800;border-radius:6px;padding:1px 7px;font-size:.8rem">${qty} ดวง</span>` : ''}`;
   const btnHtml  = isRedeem
     ? `<div class="flex flex-col gap-2">
         <button class="approve-btn" style="background:#a855f7" onclick="doApproveRedeem('${item.requestId}',this)">🎁 อนุมัติแลก</button>
@@ -1221,7 +1221,8 @@ async function doApprove(requestId, qty, btn) {
     btn.textContent=`✅ อนุมัติ${qty>1?' +'+qty:''}`;
   }
 }
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+
+async function doReject(requestId, type, btn) {
   const card = document.getElementById('qcard-'+requestId);
   if(!confirm(type==='redeem' ? 'ปฏิเสธคำขอแลกรางวัลนี้?' : 'ปฏิเสธคำขอแต้มนี้?')) return;
   if(card) card.classList.add('approving');
