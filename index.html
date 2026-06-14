@@ -1295,7 +1295,15 @@ function renderActionArea(canRequest, planType, currentPoints, maxPoints) {
           ✦ กดขอรับแสตมป์
         </button>
       </div>
-      <p class="text-center text-xs mt-3" style="color:var(--muted)">แตะเพื่อส่งคำขอให้พนักงานอนุมัติ</p>`;
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px">
+        <span class="text-xs font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+        <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)">
+          <button onclick="custQtyChange(-1)" style="background:var(--faint);border:none;color:var(--ink);font-size:1.1rem;font-weight:700;width:38px;height:38px;cursor:pointer">−</button>
+          <span id="cust-qty-val" style="min-width:32px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:800">1</span>
+          <button onclick="custQtyChange(1)" style="background:var(--faint);border:none;color:var(--ink);font-size:1.1rem;font-weight:700;width:38px;height:38px;cursor:pointer">+</button>
+        </div>
+      </div>
+      <p class="text-center text-xs mt-2" style="color:var(--muted)">แตะเพื่อส่งคำขอให้พนักงานอนุมัติ</p>`;
   }
 }
 
@@ -1307,6 +1315,15 @@ function renderActionArea(canRequest, planType, currentPoints, maxPoints) {
 const CLIENT_COOLDOWN_MS = 30_000; // 30 วิ (ตรงกับ GAS COOLDOWN_SEC)
 let requesting = false;
 let cdTimer = null;
+let custQty = 1;
+
+function custQtyChange(d) {
+  custQty = Math.max(1, Math.min(10, custQty + d));
+  const el = document.getElementById('cust-qty-val');
+  if (el) el.textContent = custQty;
+  const btn = document.getElementById('request-btn');
+  if (btn && !btn.disabled) btn.innerHTML = custQty > 1 ? `✦ ขอแสตมป์ ${custQty} แก้ว` : '✦ กดขอรับแสตมป์';
+}
 
 function getLastRequestTime() {
   return parseInt(localStorage.getItem(`lrt_${shopId}_${userPhone}`) || '0', 10);
@@ -1356,20 +1373,23 @@ async function requestPoint() {
   if (btn) { btn.innerHTML = '⏳ กำลังส่ง...'; btn.disabled = true; }
 
   try {
-    const data = await apiPost({ action:'request_point', shopId, phone:userPhone });
+    const data = await apiPost({ action:'request_point', shopId, phone:userPhone, qty:custQty });
     if (!data.success) {
       if (data.error === 'COOLDOWN' || data.error === 'RATE_LIMIT') {
-        // ด่าน 2 ตีกลับ → เริ่ม countdown UI
         startCooldownUI(CLIENT_COOLDOWN_MS);
         showToast('⏱ กรุณารอสักครู่', '#f59e0b');
       } else if (data.error === 'BRUTE_LOCK') {
-        // ด่าน 3 ตีกลับ (เกิดได้ถ้า flow ผิดปกติ)
         showToast('🔒 ' + (data.message || 'ถูกล็อกชั่วคราว'), '#ef4444');
       } else {
         showToast('⚠️ ' + (data.message || data.error), '#f59e0b');
       }
     } else {
-      showToast('✅ ส่งคำขอสำเร็จ รอพนักงานอนุมัติ', '#22c55e');
+      const qtyMsg = custQty > 1 ? ` (${custQty} แก้ว)` : '';
+      showToast(`✅ ส่งคำขอสำเร็จ${qtyMsg} รอพนักงานอนุมัติ`, '#22c55e');
+      // reset qty กลับ 1 หลังส่งสำเร็จ
+      custQty = 1;
+      const qEl = document.getElementById('cust-qty-val');
+      if (qEl) qEl.textContent = '1';
       startCooldownUI(CLIENT_COOLDOWN_MS);
     }
   } catch(err) {
