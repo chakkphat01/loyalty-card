@@ -147,6 +147,10 @@
       transition: background .12s, transform .1s; white-space: nowrap;
     }
     .approve-btn:active { filter: brightness(.9); transform: scale(.96); }
+    .qty-picker { display:flex; align-items:center; gap:0; border:1.5px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface); }
+    .qty-btn { background:var(--faint); border:none; color:var(--ink); font-size:1.2rem; font-weight:700; width:44px; height:44px; cursor:pointer; transition:background .15s; flex-shrink:0; }
+    .qty-btn:active { background:var(--border); }
+    .qty-val { flex:1; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:800; color:var(--ink); min-width:36px; }
 
     .add-btn {
       font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 700; font-size: 1.1rem;
@@ -377,6 +381,14 @@
       </div>
     </div>
     <div class="fade-up d4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+        <div class="qty-picker">
+          <button class="qty-btn" onclick="sQtyChange(-1)">−</button>
+          <span class="qty-val" id="s-qty-val">1</span>
+          <button class="qty-btn" onclick="sQtyChange(1)">+</button>
+        </div>
+      </div>
       <button class="add-btn" id="s-add-btn" onclick="doManualAdd()">➕ เพิ่ม 1 แต้ม</button>
     </div>
   </div>
@@ -460,6 +472,14 @@
             </button>
             <button class="np-btn" onclick="mlNumPress('0')">0</button>
             <button class="np-btn del" onclick="mlNumClear()" style="font-size:.85rem;">ล้าง</button>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+            <div class="qty-picker">
+              <button class="qty-btn" onclick="mlQtyChange(-1)">−</button>
+              <span class="qty-val" id="ml-qty-val">1</span>
+              <button class="qty-btn" onclick="mlQtyChange(1)">+</button>
+            </div>
           </div>
           <button class="add-btn" id="ml-add-btn" onclick="doMLManualAdd()">➕ เพิ่ม 1 แต้ม</button>
         </div>
@@ -1047,6 +1067,19 @@ function showCustDetail(c) {
 }
 
 // ── PLAN S NUMPAD ──
+// ── QTY STATE ──
+let sQty = 1, mlQty = 1;
+function sQtyChange(d) {
+  sQty = Math.max(1, Math.min(20, sQty + d));
+  document.getElementById('s-qty-val').textContent = sQty;
+  document.getElementById('s-add-btn').textContent = `➕ เพิ่ม ${sQty} แต้ม`;
+}
+function mlQtyChange(d) {
+  mlQty = Math.max(1, Math.min(20, mlQty + d));
+  document.getElementById('ml-qty-val').textContent = mlQty;
+  document.getElementById('ml-add-btn').textContent = `➕ เพิ่ม ${mlQty} แต้ม`;
+}
+
 function sNumPress(d) { if(sBuf.length>=10) return; sBuf+=d; updateSDisplay(); }
 function sNumDelete() { sBuf=sBuf.slice(0,-1); updateSDisplay(); }
 function sNumClear()  { sBuf=''; updateSDisplay(); }
@@ -1061,10 +1094,12 @@ async function doManualAdd() {
   const btn=document.getElementById('s-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
-    const r=await apiPost({action:'manual_add',shopId,password,phone:sBuf});
+    const r=await apiPost({action:'manual_add',shopId,password,phone:sBuf,qty:sQty});
     if(!r.success) throw new Error(r.error);
-    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
-    sBuf=''; updateSDisplay(); custLoaded=false;
+    showToast(`✅ บวก ${sQty} แต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
+    sBuf=''; updateSDisplay(); sQty=1;
+    document.getElementById('s-qty-val').textContent='1';
+    custLoaded=false;
   } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
   finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
@@ -1084,10 +1119,12 @@ async function doMLManualAdd() {
   const btn=document.getElementById('ml-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
-    const r=await apiPost({action:'manual_add',shopId,password,phone:mlBuf});
+    const r=await apiPost({action:'manual_add',shopId,password,phone:mlBuf,qty:mlQty});
     if(!r.success) throw new Error(r.error);
-    showToast(`✅ บวกแต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
-    mlBuf=''; updateMLDisplay(); custLoaded=false;
+    showToast(`✅ บวก ${mlQty} แต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
+    mlBuf=''; updateMLDisplay(); mlQty=1;
+    document.getElementById('ml-qty-val').textContent='1';
+    custLoaded=false;
   } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
   finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
@@ -1137,20 +1174,22 @@ function renderQueue(queue) {
 function buildQueueCard(item) {
   const div=document.createElement('div');
   const isRedeem = item.type === 'redeem';
+  const qty = Math.max(1, parseInt(item.qty)||1);
   div.className='queue-card p-4 flex items-center justify-between gap-3';
   if (isRedeem) div.style.borderLeftColor = '#a855f7';
   div.id='qcard-'+item.requestId; div.dataset.rid=item.requestId;
+  div.dataset.qty=qty;
   const ts=item.timestamp?new Date(item.timestamp):null;
   const timeStr=ts?ts.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
   const dotColor = isRedeem ? '#a855f7' : 'var(--green)';
-  const label    = isRedeem ? '🎁 ขอแลกรางวัล' : '⭐ ขอแสตมป์';
+  const label    = isRedeem ? '🎁 ขอแลกรางวัล' : `⭐ ขอแสตมป์ ${qty > 1 ? `<span style="background:var(--amber);color:#0f0f17;font-weight:800;border-radius:6px;padding:1px 7px;font-size:.8rem">${qty} แก้ว</span>` : ''}`;
   const btnHtml  = isRedeem
     ? `<div class="flex flex-col gap-2">
         <button class="approve-btn" style="background:#a855f7" onclick="doApproveRedeem('${item.requestId}',this)">🎁 อนุมัติแลก</button>
         <button class="approve-btn" style="background:var(--red);font-size:.85rem;padding:9px 14px" onclick="doReject('${item.requestId}','redeem',this)">✕ ปฏิเสธ</button>
        </div>`
     : `<div class="flex flex-col gap-2">
-        <button class="approve-btn" onclick="doApprove('${item.requestId}',this)">✅ อนุมัติ</button>
+        <button class="approve-btn" onclick="doApprove('${item.requestId}',${qty},this)">✅ อนุมัติ ${qty > 1 ? `+${qty}` : ''}</button>
         <button class="approve-btn" style="background:var(--red);font-size:.85rem;padding:9px 14px" onclick="doReject('${item.requestId}','point',this)">✕ ปฏิเสธ</button>
        </div>`;
   div.innerHTML=`
@@ -1165,9 +1204,23 @@ function buildQueueCard(item) {
   return div;
 }
 
-
-// ★ ปฏิเสธคำขอ (ลบออกจาก Queue ฝั่ง client เท่านั้น — GAS จะ auto-expire)
-async function doReject(requestId, type, btn) {
+async function doApprove(requestId, qty, btn) {
+  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+  qty = Math.max(1, parseInt(qty)||1);
+  const card=document.getElementById('qcard-'+requestId);
+  if(card) card.classList.add('approving'); btn.textContent='⏳';
+  try {
+    const r=await apiPost({action:'approve_point',shopId,password,requestId,qty});
+    if(!r.success) throw new Error(r.error);
+    const qtyLabel = (r.qty||qty) > 1 ? ` (+${r.qty||qty} แต้ม)` : '';
+    showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)}${qtyLabel} — รวม ${r.newPoints} แต้ม`,'#16a34a');
+    removeCard(card);
+  } catch(e) {
+    showToast('❌ อนุมัติไม่สำเร็จ: '+e.message,'#dc2626');
+    if(card) card.classList.remove('approving');
+    btn.textContent=`✅ อนุมัติ${qty>1?' +'+qty:''}`;
+  }
+}
   if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   const card = document.getElementById('qcard-'+requestId);
   if(!confirm(type==='redeem' ? 'ปฏิเสธคำขอแลกรางวัลนี้?' : 'ปฏิเสธคำขอแต้มนี้?')) return;
@@ -1219,28 +1272,6 @@ async function doApproveRedeem(requestId, btn) {
     if(card) card.classList.remove('approving');
     btn.textContent='🎁 อนุมัติ';
   }
-}
-
-async function doApprove(requestId, btn) {
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
-  const card=document.getElementById('qcard-'+requestId);
-  if(card) card.classList.add('approving'); btn.textContent='⏳';
-  try {
-    const r=await apiPost({action:'approve_point',shopId,password,requestId});
-    if(!r.success) throw new Error(r.error);
-    showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)} — ${r.newPoints} แต้ม`,'#16a34a');
-    if(card){
-      card.style.transition='all .3s'; card.style.opacity='0'; card.style.transform='translateX(30px)';
-      setTimeout(()=>{
-        card.remove();
-        const has=document.querySelectorAll('#queue-list [data-rid]').length>0;
-        document.getElementById('queue-empty').style.display=has?'none':'';
-        const rem=document.querySelectorAll('#queue-list [data-rid]').length;
-        const badge=document.getElementById('queue-count-badge');
-        badge.textContent=rem; badge.classList.toggle('hidden',rem===0);
-      },300);
-    }
-  } catch(e) { showToast('❌ อนุมัติไม่สำเร็จ: '+e.message,'#dc2626'); if(card) card.classList.remove('approving'); btn.textContent='✅ อนุมัติ'; }
 }
 
 // ── AUDIO BEEP ──
