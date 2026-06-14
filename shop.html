@@ -1070,62 +1070,66 @@ function showCustDetail(c) {
 // ── QTY STATE ──
 let sQty = 1, mlQty = 1;
 function sQtyChange(d) {
+  sfx[d > 0 ? 'qtyUp' : 'qtyDown']();
   sQty = Math.max(1, Math.min(20, sQty + d));
   document.getElementById('s-qty-val').textContent = sQty;
   document.getElementById('s-add-btn').textContent = `➕ เพิ่ม ${sQty} แต้ม`;
 }
 function mlQtyChange(d) {
+  sfx[d > 0 ? 'qtyUp' : 'qtyDown']();
   mlQty = Math.max(1, Math.min(20, mlQty + d));
   document.getElementById('ml-qty-val').textContent = mlQty;
   document.getElementById('ml-add-btn').textContent = `➕ เพิ่ม ${mlQty} แต้ม`;
 }
 
-function sNumPress(d) { if(sBuf.length>=10) return; sBuf+=d; updateSDisplay(); }
-function sNumDelete() { sBuf=sBuf.slice(0,-1); updateSDisplay(); }
-function sNumClear()  { sBuf=''; updateSDisplay(); }
+function sNumPress(d) { sfx.tap(); if(sBuf.length>=10) return; sBuf+=d; updateSDisplay(); }
+function sNumDelete() { sfx.del(); sBuf=sBuf.slice(0,-1); updateSDisplay(); }
+function sNumClear()  { sfx.del(); sBuf=''; updateSDisplay(); }
 function updateSDisplay() {
   const el=document.getElementById('s-phone-display');
   if(!sBuf){el.textContent='กรอกเบอร์โทร';el.classList.add('placeholder');return;}
   el.classList.remove('placeholder'); el.textContent=fmtPhone(sBuf);
 }
 async function doManualAdd() {
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
-  if(sBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
+  if (suspendedMode) { sfx.error(); showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+  if(sBuf.length!==10){ sfx.error(); showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
   const btn=document.getElementById('s-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
     const r=await apiPost({action:'manual_add',shopId,password,phone:sBuf,qty:sQty});
     if(!r.success) throw new Error(r.error);
+    sfx.success();
     showToast(`✅ บวก ${sQty} แต้มสำเร็จ! ${fmtPhone(sBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
     sBuf=''; updateSDisplay(); sQty=1;
     document.getElementById('s-qty-val').textContent='1';
     custLoaded=false;
-  } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
+  } catch(e) { sfx.error(); showToast('❌ '+e.message,'#dc2626'); }
   finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
 
 // ── PLAN ML NUMPAD ──
-function mlNumPress(d) { if(mlBuf.length>=10) return; mlBuf+=d; updateMLDisplay(); }
-function mlNumDelete() { mlBuf=mlBuf.slice(0,-1); updateMLDisplay(); }
-function mlNumClear()  { mlBuf=''; updateMLDisplay(); }
+function mlNumPress(d) { sfx.tap(); if(mlBuf.length>=10) return; mlBuf+=d; updateMLDisplay(); }
+function mlNumDelete() { sfx.del(); mlBuf=mlBuf.slice(0,-1); updateMLDisplay(); }
+function mlNumClear()  { sfx.del(); mlBuf=''; updateMLDisplay(); }
 function updateMLDisplay() {
   const el=document.getElementById('ml-phone-display');
   if(!mlBuf){el.textContent='กรอกเบอร์โทร';el.classList.add('placeholder');return;}
   el.classList.remove('placeholder'); el.textContent=fmtPhone(mlBuf);
 }
 async function doMLManualAdd() {
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
-  if(mlBuf.length!==10){showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
+  if (suspendedMode) { sfx.error(); showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+  if(mlBuf.length!==10){ sfx.error(); showToast('⚠️ กรอกเบอร์โทร 10 หลัก','#d97706');return;}
   const btn=document.getElementById('ml-add-btn');
   btn.disabled=true; btn.textContent='⏳ กำลังบันทึก...';
   try {
     const r=await apiPost({action:'manual_add',shopId,password,phone:mlBuf,qty:mlQty});
     if(!r.success) throw new Error(r.error);
+    sfx.success();
     showToast(`✅ บวก ${mlQty} แต้มสำเร็จ! ${fmtPhone(mlBuf)} — ${r.newPoints} แต้ม`,'#16a34a');
     mlBuf=''; updateMLDisplay(); mlQty=1;
     document.getElementById('ml-qty-val').textContent='1';
     custLoaded=false;
-  } catch(e) { showToast('❌ '+e.message,'#dc2626'); }
+  } catch(e) { sfx.error(); showToast('❌ '+e.message,'#dc2626'); }
   finally { btn.disabled=false; btn.textContent='➕ เพิ่ม 1 แต้ม'; }
 }
 
@@ -1165,7 +1169,7 @@ function renderQueue(queue) {
   queue.forEach(item => {
     if(!existingIds.has(item.requestId)) { newCount++; list.insertBefore(buildQueueCard(item),empty); knownQueue.add(item.requestId); }
   });
-  if(newCount>0) playBeep();
+  if(newCount>0) sfx.ping();
   badge.textContent=queue.length;
   badge.classList.toggle('hidden',queue.length===0);
   empty.style.display=list.querySelectorAll('[data-rid]').length>0?'none':'';
@@ -1205,17 +1209,19 @@ function buildQueueCard(item) {
 }
 
 async function doApprove(requestId, qty, btn) {
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+  if (suspendedMode) { sfx.error(); showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   qty = Math.max(1, parseInt(qty)||1);
   const card=document.getElementById('qcard-'+requestId);
   if(card) card.classList.add('approving'); btn.textContent='⏳';
   try {
     const r=await apiPost({action:'approve_point',shopId,password,requestId,qty});
     if(!r.success) throw new Error(r.error);
+    sfx.approve();
     const qtyLabel = (r.qty||qty) > 1 ? ` (+${r.qty||qty} แต้ม)` : '';
     showToast(`✅ อนุมัติสำเร็จ! ${fmtPhone(r.phone)}${qtyLabel} — รวม ${r.newPoints} แต้ม`,'#16a34a');
     removeCard(card);
   } catch(e) {
+    sfx.error();
     showToast('❌ อนุมัติไม่สำเร็จ: '+e.message,'#dc2626');
     if(card) card.classList.remove('approving');
     btn.textContent=`✅ อนุมัติ${qty>1?' +'+qty:''}`;
@@ -1225,16 +1231,15 @@ async function doApprove(requestId, qty, btn) {
 async function doReject(requestId, type, btn) {
   const card = document.getElementById('qcard-'+requestId);
   if(!confirm(type==='redeem' ? 'ปฏิเสธคำขอแลกรางวัลนี้?' : 'ปฏิเสธคำขอแต้มนี้?')) return;
+  sfx.error();
   if(card) card.classList.add('approving');
   btn.textContent='⏳';
   try {
     const r = await apiPost({action:'reject_request', shopId, password, requestId});
-    // GAS ยังไม่มี handler → ถือว่า success=false แต่ก็ยังลบออก UI ได้
     const label = type==='redeem' ? '🎁 ปฏิเสธแลกรางวัลแล้ว' : '⭐ ปฏิเสธคำขอแต้มแล้ว';
     showToast(label, '#dc2626');
     removeCard(card);
   } catch(e) {
-    // network/GAS error — ก็ยังลบออก UI ให้เพราะเจ้าของร้านตัดสินใจแล้ว
     showToast('ปฏิเสธแล้ว (offline)', '#dc2626');
     removeCard(card);
   }
@@ -1259,40 +1264,101 @@ function removeCard(card) {
 }
 // ★ อนุมัติแลกรางวัล
 async function doApproveRedeem(requestId, btn) {
-  if (suspendedMode) { showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
+  if (suspendedMode) { sfx.error(); showToast('🔒 บัญชีถูกระงับ','#dc2626'); return; }
   const card = document.getElementById('qcard-'+requestId);
   if(card) card.classList.add('approving');
   btn.textContent='⏳';
   try {
     const r = await apiPost({action:'approve_redeem', shopId, password, requestId});
     if(!r.success) throw new Error(r.error);
+    sfx.redeem();
     showToast(`🎁 อนุมัติแลกรางวัลแล้ว! ${fmtPhone(r.phone)} — แต้ม reset เป็น 0`, '#a855f7');
     removeCard(card);
   } catch(e) {
+    sfx.error();
     showToast('❌ '+e.message,'#dc2626');
     if(card) card.classList.remove('approving');
     btn.textContent='🎁 อนุมัติ';
   }
 }
 
-// ── AUDIO BEEP ──
-function playBeep() {
-  try {
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type='sine'; osc.frequency.setValueAtTime(880,ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(660,ctx.currentTime+.15);
-    gain.gain.setValueAtTime(.4,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.3);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+.3);
-    const o2=ctx.createOscillator(),g2=ctx.createGain();
-    o2.connect(g2); g2.connect(ctx.destination); o2.type='sine';
-    o2.frequency.setValueAtTime(1100,ctx.currentTime+.2);
-    g2.gain.setValueAtTime(.3,ctx.currentTime+.2); g2.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.45);
-    o2.start(ctx.currentTime+.2); o2.stop(ctx.currentTime+.45);
-    setTimeout(()=>ctx.close(),1000);
-  } catch(_){}
+// ── AUDIO SYSTEM (ASMR) ──
+let _audioCtx = null;
+function getCtx() {
+  if (!_audioCtx || _audioCtx.state === 'closed')
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
 }
+
+function _tone(freq, type, vol, start, dur, freqEnd) {
+  try {
+    const ctx = getCtx(), t = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    // soft low-pass filter for warmth
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 2400;
+    osc.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t + start);
+    if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + start + dur);
+    gain.gain.setValueAtTime(0, t + start);
+    gain.gain.linearRampToValueAtTime(vol, t + start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    osc.start(t + start); osc.stop(t + start + dur + 0.05);
+  } catch(_) {}
+}
+
+const sfx = {
+  // numpad กด — เสียง click นุ่มๆ
+  tap() {
+    _tone(800, 'sine', 0.08, 0, 0.06, 600);
+    _tone(1200, 'sine', 0.04, 0.01, 0.05);
+  },
+  // ลบตัวเลข
+  del() {
+    _tone(500, 'sine', 0.07, 0, 0.08, 350);
+  },
+  // เพิ่ม/ลด qty
+  qtyUp() {
+    _tone(660, 'sine', 0.1, 0, 0.07);
+    _tone(880, 'sine', 0.08, 0.06, 0.07);
+  },
+  qtyDown() {
+    _tone(550, 'sine', 0.1, 0, 0.07);
+    _tone(440, 'sine', 0.07, 0.06, 0.07);
+  },
+  // อนุมัติแต้ม — เสียงดีใจ 3 โน้ต
+  approve() {
+    _tone(523, 'sine', 0.15, 0,    0.12);
+    _tone(659, 'sine', 0.15, 0.12, 0.12);
+    _tone(784, 'sine', 0.18, 0.24, 0.20);
+    _tone(1046,'sine', 0.12, 0.38, 0.25);
+  },
+  // เพิ่มแต้ม manual สำเร็จ
+  success() {
+    _tone(440, 'sine', 0.12, 0,    0.10);
+    _tone(554, 'sine', 0.14, 0.10, 0.10);
+    _tone(659, 'sine', 0.16, 0.20, 0.18);
+  },
+  // error / ปฏิเสธ
+  error() {
+    _tone(300, 'sine', 0.12, 0,    0.12, 220);
+    _tone(220, 'sine', 0.10, 0.12, 0.15, 180);
+  },
+  // notification เสียงใหม่เข้าคิว — pop เบาๆ
+  ping() {
+    _tone(1200,'sine', 0.10, 0,    0.05);
+    _tone(900, 'sine', 0.08, 0.05, 0.10, 700);
+  },
+  // แลกรางวัล
+  redeem() {
+    [0,0.1,0.2,0.3].forEach((s,i) => _tone([523,659,784,1046][i],'sine',0.13,s,0.15));
+  }
+};
+
+// compat alias
+function playBeep() { sfx.approve(); }
 
 // ── HELPERS ──
 function fmtPhone(p) { const s=String(p).replace(/\D/g,'').padEnd(10,' '); return s.replace(/(\S{3})(\S{3})(\S{4})/,'$1-$2-$3'); }
