@@ -1296,7 +1296,7 @@ function renderActionArea(canRequest, planType, currentPoints, maxPoints) {
         </button>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px">
-        <span class="text-xs font-semibold" style="color:var(--muted)">จำนวนแก้ว</span>
+        <span class="text-xs font-semibold" style="color:var(--muted)">จำนวนดวง</span>
         <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)">
           <button onclick="custQtyChange(-1)" style="background:var(--faint);border:none;color:var(--ink);font-size:1.1rem;font-weight:700;width:38px;height:38px;cursor:pointer">−</button>
           <span id="cust-qty-val" style="min-width:32px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:800">1</span>
@@ -1322,7 +1322,7 @@ function custQtyChange(d) {
   const el = document.getElementById('cust-qty-val');
   if (el) el.textContent = custQty;
   const btn = document.getElementById('request-btn');
-  if (btn && !btn.disabled) btn.innerHTML = custQty > 1 ? `✦ ขอแสตมป์ ${custQty} แก้ว` : '✦ กดขอรับแสตมป์';
+  if (btn && !btn.disabled) btn.innerHTML = custQty > 1 ? `✦ ขอแสตมป์ ${custQty} ดวง` : '✦ กดขอรับแสตมป์';
 }
 
 function getLastRequestTime() {
@@ -1384,7 +1384,7 @@ async function requestPoint() {
         showToast('⚠️ ' + (data.message || data.error), '#f59e0b');
       }
     } else {
-      const qtyMsg = custQty > 1 ? ` (${custQty} แก้ว)` : '';
+      const qtyMsg = custQty > 1 ? ` (${custQty} ดวง)` : '';
       showToast(`✅ ส่งคำขอสำเร็จ${qtyMsg} รอพนักงานอนุมัติ`, '#22c55e');
       // reset qty กลับ 1 หลังส่งสำเร็จ
       custQty = 1;
