@@ -588,8 +588,12 @@
 </div>
 
 <!-- ══════════ NICKNAME MODAL ══════════ -->
-<div id="nickname-modal" class="hidden modal-backdrop">
+<div id="nickname-modal" class="hidden modal-backdrop" onclick="if(event.target===this)closeNicknameModal()">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:48px">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:-8px">
+      <button onclick="closeNicknameModal()" aria-label="ปิด"
+        style="width:32px;height:32px;border-radius:50%;border:none;background:var(--faint);color:var(--muted);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
     <div class="text-center mb-6">
       <div class="text-4xl mb-3">✨</div>
       <h3 class="heading font-bold text-xl mb-2" id="nickname-modal-title">ตั้งชื่อเล่นของคุณ</h3>
@@ -626,9 +630,9 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycby-5p7TDLgkMw8UIfs5DAjf
 let shopId = null, userPhone = null, phoneBuffer = '', shopData = null;
 // ★ ข้อมูลติดต่อ — แก้เป็นของร้าน
 const CONTACT = {
-  facebook: 'https://facebook.com/ZER0Game',
-  line:     'https://line.me/ti/p/YOUR_LINE_ID',
-  gmail:    'mailto:your@email.com',
+  facebook: 'https://www.facebook.com/profile.php?id=61590505624744',
+  line:     'https://line.me/ti/p/zer0ser_',
+  gmail:    'mailto:tatatata2039960@email.com',
 };
 
 let historyLoaded = false, rankLoaded = false;
@@ -1141,7 +1145,7 @@ async function loginDone(phone) {
 async function loadCardData() {
   try {
     const data = await apiPost({ action:'check_points', shopId, phone:userPhone });
-    if (!data.success) throw new Error(data.error || 'โหลดข้อมูลไม่สำเร็จ');
+    if (!data.success) throw new Error(data.message || data.error || 'โหลดข้อมูลไม่สำเร็จ');
     // sync nickname จาก server → cache → UI
     syncNicknameFromServer(data.customer);
     updateTopBarName();
@@ -1654,6 +1658,7 @@ async function loadRank() {
   document.getElementById('rank-content').classList.add('hidden');
   try {
     const res = await apiPost({ action: 'get_rank', shopId, phone: userPhone });
+    if (!res.success) throw new Error(res.message || res.error || 'คำนวณอันดับไม่สำเร็จ');
     rankLoaded = true;
     rankDataShop = {
       myPts:    res.myPts    ?? 0,
@@ -1681,7 +1686,7 @@ async function loadRank() {
     renderLeaderboard();
   } catch(e) {
     document.getElementById('rank-loading').classList.add('hidden');
-    showToast('⚠️ คำนวณอันดับไม่สำเร็จ', '#ff6b6b');
+    showToast('⚠️ ' + (e.message || 'คำนวณอันดับไม่สำเร็จ'), '#ff6b6b');
   }
 }
 
